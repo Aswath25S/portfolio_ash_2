@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Serif:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  ::selection { background: rgba(120,120,120,.25); }
+  @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,.35); border-radius: 8px; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:{{ t.bg }}; color:{{ t.fg }}; font-family:{{ t.body }}, system-ui, sans-serif; transition:background .55s ease, color .55s ease; overflow-x:hidden; position:relative">
+
+  <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+    <div style="min-height:100vh; display:flex; flex-direction:column">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:26px 34px; z-index:5">
+        <div style="font-family:{{ t.head }}, sans-serif; font-weight:800; font-size:20px; letter-spacing:-.01em">Aswath Suresh</div>
+        <div style="display:flex; align-items:center; gap:8px">
+          <button onClick="{{ openModal }}" style="background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; padding:9px 16px; border-radius:999px; font:inherit; font-size:14px; cursor:pointer">About</button>
+          <button onClick="{{ downloadResume }}" style="background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; padding:9px 16px; border-radius:999px; font:inherit; font-size:14px; cursor:pointer">Résumé ↓</button>
+          <button onClick="{{ toggleMode }}" title="Toggle theme" style="background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; width:38px; height:38px; border-radius:999px; font-size:15px; cursor:pointer">{{ modeIcon }}</button>
+        </div>
+      </div>
+
+      <div style="padding:46px 34px 26px; max-width:1200px">
+        <div style="font-family:{{ t.mono }}, monospace; font-size:14px; letter-spacing:.18em; text-transform:uppercase; color:{{ t.accent2 }}">Recent MS Data Science grad · Johns Hopkins</div>
+        <h1 style="font-family:{{ t.head }}, sans-serif; font-weight:800; font-size:clamp(38px,6.4vw,92px); line-height:.98; letter-spacing:-.02em; margin:20px 0 0; max-width:15ch">Jack of many trades, master of one degree.</h1>
+        <p style="font-size:clamp(16px,1.7vw,20px); color:{{ t.muted }}; max-width:60ch; margin:22px 0 0; line-height:1.5">Pick a world. The whole site becomes it. <span style="opacity:.7">Tech, consulting, leadership, and the other stuff I love — each with its own look, layout, and story.</span></p>
+      </div>
+
+      <div style="flex:1 1 auto; display:flex; gap:14px; padding:22px 20px 26px; min-height:60vh">
+        <sc-for list="{{ cats }}" as="p" hint-placeholder-count="4">
+          <div onClick="{{ p.enter }}" style="position:relative; flex:1 1 0; min-width:0; border-radius:16px; background:{{ p.panelBg }}; color:{{ p.panelFg }}; border:1px solid {{ p.panelBorder }}; padding:28px 26px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; overflow:hidden; transition:flex-grow .5s cubic-bezier(.4,0,.1,1), box-shadow .35s; font-family:{{ p.font }}, sans-serif" style-hover="flex-grow:2.6; box-shadow:0 26px 70px rgba(0,0,0,.4)">
+            <div>
+              <div style="font-family:{{ mono }}, monospace; font-size:13px; letter-spacing:.16em; opacity:.65">{{ p.num }}</div>
+              <div style="font-size:clamp(26px,2.7vw,42px); font-weight:700; margin-top:10px; line-height:1.02; letter-spacing:-.01em">{{ p.name }}</div>
+            </div>
+            <div>
+              <div style="font-size:15px; opacity:.82; line-height:1.45; margin-bottom:20px; max-width:34ch">{{ p.tagline }}</div>
+              <div style="display:inline-flex; align-items:center; gap:9px; font-size:14px; font-weight:600; padding:9px 16px; border:1px solid currentColor; border-radius:999px; opacity:.9">Enter <span>→</span></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCategory }}" hint-placeholder-val="{{ false }}">
+    <div style="position:sticky; top:0; z-index:40; display:flex; justify-content:space-between; align-items:center; gap:16px; padding:15px 26px; background:{{ t.navBg }}; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border-bottom:1px solid {{ t.border }}">
+      <div onClick="{{ goHome }}" style="cursor:pointer; font-family:{{ t.head }}, sans-serif; font-weight:700; font-size:16px; white-space:nowrap">← Aswath Suresh</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center">
+        <sc-for list="{{ cats }}" as="p" hint-placeholder-count="4">
+          <button onClick="{{ p.enter }}" style="background:{{ p.tabBg }}; color:{{ p.tabFg }}; border:1px solid {{ p.tabBorder }}; padding:8px 15px; border-radius:999px; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; transition:all .25s">{{ p.name }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px">
+        <button onClick="{{ downloadResume }}" style="background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; padding:8px 14px; border-radius:999px; font:inherit; font-size:13.5px; cursor:pointer; white-space:nowrap">Résumé ↓</button>
+        <button onClick="{{ openModal }}" style="background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; padding:8px 14px; border-radius:999px; font:inherit; font-size:13.5px; cursor:pointer">About</button>
+        <button onClick="{{ toggleMode }}" title="Toggle theme" style="background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; width:36px; height:36px; border-radius:999px; font-size:15px; cursor:pointer">{{ modeIcon }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ======================= TECH — terminal / git log ======================= -->
+  <sc-if value="{{ isTech }}" hint-placeholder-val="{{ false }}">
+    <div style="background-image:repeating-linear-gradient(0deg, rgba(120,255,180,.035) 0px, rgba(120,255,180,.035) 1px, transparent 1px, transparent 3px); animation:riseIn .5s ease both">
+      <div style="max-width:1060px; margin:0 auto; padding:44px 22px 8px; font-family:'JetBrains Mono', monospace">
+        <div style="border:1px solid {{ t.border }}; border-radius:12px; overflow:hidden; background:{{ t.surface }}; box-shadow:0 24px 70px rgba(0,0,0,.35)">
+          <div style="display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid {{ t.border }}">
+            <span style="width:11px; height:11px; border-radius:50%; background:#ff5f56"></span>
+            <span style="width:11px; height:11px; border-radius:50%; background:#ffbd2e"></span>
+            <span style="width:11px; height:11px; border-radius:50%; background:#27c93f"></span>
+            <span style="margin-left:12px; font-size:12.5px; color:{{ t.muted }}">aswath@jhu — ~/tech — zsh</span>
+          </div>
+          <div style="padding:26px 22px">
+            <div style="font-size:13.5px; color:{{ t.muted }}"><span style="color:{{ t.accent }}">aswath@jhu</span>:<span style="color:{{ t.accent2 }}">~</span>$ whoami</div>
+            <div style="margin:8px 0 24px">
+              <div style="font-family:'Space Grotesk', sans-serif; font-size:clamp(30px,5vw,58px); font-weight:700; color:{{ t.fg }}; line-height:1.02; letter-spacing:-.01em">Aswath Suresh</div>
+              <div style="color:{{ t.accent }}; font-size:15px; margin-top:8px">// {{ cur.title }}</div>
+            </div>
+            <div style="font-size:13.5px; color:{{ t.muted }}"><span style="color:{{ t.accent }}">aswath@jhu</span>:~$ cat about.txt</div>
+            <div style="max-width:72ch; font-size:15px; line-height:1.65; color:{{ t.fg }}; margin-top:8px">{{ cur.intro }}<span style="display:inline-block; width:9px; height:16px; background:{{ t.accent }}; margin-left:5px; vertical-align:-2px; animation:blink 1s steps(1) infinite"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="max-width:1060px; margin:0 auto; padding:26px 22px; font-family:'JetBrains Mono', monospace">
+        <div style="font-size:13px; color:{{ t.muted }}; margin-bottom:14px"><span style="color:{{ t.accent }}">$</span> stats --summary</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1px; background:{{ t.border }}; border:1px solid {{ t.border }}; border-radius:10px; overflow:hidden">
+          <sc-for list="{{ cur.metrics }}" as="m" hint-placeholder-count="4">
+            <div style="background:{{ t.surface }}; padding:18px 18px 20px">
+              <div style="color:{{ t.accent }}; font-family:'Space Grotesk', sans-serif; font-size:clamp(26px,3vw,34px); font-weight:700; line-height:1">{{ m.value }}</div>
+              <div style="color:{{ t.muted }}; font-size:12.5px; margin-top:8px; line-height:1.4">{{ m.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="max-width:1060px; margin:0 auto; padding:32px 22px; font-family:'JetBrains Mono', monospace">
+        <div style="font-size:13px; color:{{ t.muted }}; margin-bottom:22px"><span style="color:{{ t.accent }}">$</span> git log --experience</div>
+        <div>
+          <sc-for list="{{ cur.roles }}" as="r" hint-placeholder-count="4">
+            <div style="position:relative; padding:0 0 26px 30px; border-left:2px solid {{ t.border }}; margin-left:6px">
+              <span style="position:absolute; left:-7px; top:3px; width:11px; height:11px; border-radius:50%; background:{{ t.accent }}; box-shadow:0 0 12px {{ t.accent }}"></span>
+              <div style="font-size:12.5px; color:{{ t.accent2 }}">commit {{ r.hash }}</div>
+              <div style="font-size:12.5px; color:{{ t.muted }}">Date: {{ r.dates }} · {{ r.place }}</div>
+              <div style="font-family:'Space Grotesk', sans-serif; font-size:19px; font-weight:600; color:{{ t.fg }}; margin-top:9px">{{ r.role }} <span style="color:{{ t.accent }}">@ {{ r.org }}</span></div>
+              <div style="font-size:12.5px; color:{{ t.muted }}; margin-top:2px">{{ r.orgDesc }}</div>
+              <div style="margin-top:11px; display:flex; flex-direction:column; gap:5px">
+                <sc-for list="{{ r.points }}" as="pt" hint-placeholder-count="2">
+                  <div style="font-size:14px; line-height:1.55; color:{{ t.fg }}; padding-left:16px; text-indent:-16px"><span style="color:{{ t.accent }}">+ </span>{{ pt }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="max-width:1060px; margin:0 auto; padding:22px 22px; font-family:'JetBrains Mono', monospace">
+        <div style="font-size:13px; color:{{ t.muted }}; margin-bottom:18px"><span style="color:{{ t.accent }}">$</span> ls ~/projects</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px">
+          <sc-for list="{{ cur.projects }}" as="pr" hint-placeholder-count="6">
+            <div style="border:1px solid {{ t.border }}; border-radius:8px; background:{{ t.surface }}; padding:18px; transition:transform .2s, border-color .2s" style-hover="transform:translateY(-4px); border-color:{{ t.accent }}">
+              <div style="color:{{ t.accent2 }}; font-size:11.5px">~/projects/</div>
+              <div style="font-family:'Space Grotesk', sans-serif; font-size:16.5px; font-weight:600; color:{{ t.fg }}; margin-top:2px; line-height:1.2">{{ pr.name }}</div>
+              <div style="font-size:11.5px; color:{{ t.muted }}; margin-top:4px">{{ pr.meta }}</div>
+              <div style="margin-top:12px; display:flex; flex-direction:column; gap:5px">
+                <sc-for list="{{ pr.points }}" as="pt" hint-placeholder-count="2">
+                  <div style="font-size:13px; line-height:1.5; color:{{ t.fg }}; padding-left:15px; text-indent:-15px"><span style="color:{{ t.accent }}">&gt; </span>{{ pt }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="max-width:1060px; margin:0 auto; padding:30px 22px 20px; font-family:'JetBrains Mono', monospace">
+        <div style="font-size:13px; color:{{ t.muted }}; margin-bottom:16px"><span style="color:{{ t.accent }}">$</span> cat toolkit.json</div>
+        <div style="display:flex; flex-direction:column; gap:16px">
+          <div style="display:flex; flex-wrap:wrap; gap:9px; align-items:center">
+            <span style="color:{{ t.accent2 }}; font-size:13px; margin-right:4px">"technical":</span>
+            <sc-for list="{{ cur.skillsTech }}" as="s" hint-placeholder-count="8"><span style="border:1px solid {{ t.border }}; background:{{ t.surface }}; padding:6px 12px; border-radius:6px; font-size:13px; color:{{ t.fg }}">{{ s }}</span></sc-for>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:9px; align-items:center">
+            <span style="color:{{ t.accent2 }}; font-size:13px; margin-right:4px">"domain":</span>
+            <sc-for list="{{ cur.skillsDomain }}" as="s" hint-placeholder-count="6"><span style="border:1px solid {{ t.accent }}; color:{{ t.accent }}; padding:6px 12px; border-radius:6px; font-size:13px">{{ s }}</span></sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ======================= CONSULTING — strategy deck ======================= -->
+  <sc-if value="{{ isConsulting }}" hint-placeholder-val="{{ false }}">
+    <div style="animation:riseIn .5s ease both">
+      <div style="max-width:1040px; margin:0 auto; padding:58px 28px 14px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid {{ t.accent }}; padding-bottom:14px">
+          <div style="font-family:'Space Mono', monospace; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:{{ t.accent }}">Executive Summary</div>
+          <div style="font-family:'Space Mono', monospace; font-size:12px; color:{{ t.muted }}">Prepared by A. Suresh</div>
+        </div>
+        <h1 style="font-family:'Spectral', serif; font-weight:600; font-size:clamp(34px,5.2vw,66px); line-height:1.05; color:{{ t.fg }}; margin:28px 0 0; max-width:18ch; letter-spacing:-.01em">{{ cur.title }}</h1>
+        <p style="max-width:62ch; font-size:17.5px; line-height:1.6; color:{{ t.muted }}; margin-top:20px">{{ cur.intro }}</p>
+      </div>
+
+      <div style="max-width:1040px; margin:0 auto; padding:34px 28px 8px">
+        <div style="font-family:'Space Mono', monospace; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:{{ t.accent2 }}; margin-bottom:16px">Exhibit A — Impact at a glance</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); border-top:1px solid {{ t.border }}; border-left:1px solid {{ t.border }}">
+          <sc-for list="{{ cur.metrics }}" as="m" hint-placeholder-count="4">
+            <div style="padding:26px 24px; border-right:1px solid {{ t.border }}; border-bottom:1px solid {{ t.border }}">
+              <div style="font-family:'Spectral', serif; font-size:clamp(30px,3.6vw,48px); font-weight:600; color:{{ t.accent }}; line-height:1">{{ m.value }}</div>
+              <div style="width:36px; height:3px; background:{{ t.accent2 }}; margin:14px 0"></div>
+              <div style="font-size:13px; color:{{ t.muted }}; line-height:1.45">{{ m.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="max-width:1040px; margin:0 auto; padding:44px 28px 10px">
+        <div style="font-family:'Space Mono', monospace; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:{{ t.accent2 }}">Selected Engagements</div>
+        <div style="margin-top:8px">
+          <sc-for list="{{ cur.roles }}" as="r" hint-placeholder-count="5">
+            <div style="display:grid; grid-template-columns:72px 1fr; gap:26px; border-top:1px solid {{ t.border }}; padding:32px 0">
+              <div style="font-family:'Spectral', serif; font-size:42px; font-weight:600; color:{{ t.accent }}; line-height:.9">{{ r.no }}</div>
+              <div>
+                <div style="font-family:'Spectral', serif; font-size:24px; font-weight:600; color:{{ t.fg }}; line-height:1.15">{{ r.org }}</div>
+                <div style="display:flex; gap:18px; flex-wrap:wrap; font-family:'Space Mono', monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:{{ t.muted }}; margin-top:8px">
+                  <span style="color:{{ t.accent }}">{{ r.role }}</span><span>{{ r.dates }}</span><span>{{ r.place }}</span>
+                </div>
+                <div style="font-size:14px; color:{{ t.muted }}; margin-top:6px; font-style:italic">{{ r.orgDesc }}</div>
+                <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px">
+                  <sc-for list="{{ r.points }}" as="pt" hint-placeholder-count="2">
+                    <div style="display:grid; grid-template-columns:16px 1fr; gap:10px; font-size:15px; line-height:1.55; color:{{ t.fg }}"><span style="color:{{ t.accent2 }}; font-weight:700">›</span><span>{{ pt }}</span></div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ======================= LEADERSHIP — magazine editorial ======================= -->
+  <sc-if value="{{ isLeadership }}" hint-placeholder-val="{{ false }}">
+    <div style="animation:riseIn .5s ease both">
+      <div style="max-width:1000px; margin:0 auto; padding:56px 30px 8px">
+        <div style="font-family:'Work Sans', sans-serif; font-size:12px; letter-spacing:.26em; text-transform:uppercase; color:{{ t.accent }}; display:flex; gap:14px; align-items:center">
+          <span>The Leadership Issue</span><span style="flex:1; height:1px; background:{{ t.border }}"></span><span style="color:{{ t.muted }}">Vol. 04 · 2026</span>
+        </div>
+        <h1 style="font-family:'Instrument Serif', serif; font-weight:400; font-size:clamp(42px,8vw,102px); line-height:.98; color:{{ t.fg }}; margin:22px 0 0; letter-spacing:-.01em; max-width:16ch">{{ cur.title }}</h1>
+        <p style="font-family:'Newsreader', serif; font-style:italic; font-size:clamp(19px,2.2vw,25px); line-height:1.5; color:{{ t.muted }}; margin-top:24px; max-width:58ch">{{ cur.intro }}</p>
+      </div>
+
+      <div style="max-width:1000px; margin:0 auto; padding:22px 30px">
+        <div style="height:clamp(200px,32vw,320px); border:1px solid {{ t.border }}; border-radius:4px; background:repeating-linear-gradient(45deg, {{ t.surface }}, {{ t.surface }} 13px, transparent 13px, transparent 26px); display:flex; align-items:flex-end; padding:18px">
+          <span style="font-family:'Work Sans', sans-serif; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:{{ t.muted }}; background:{{ t.bg }}; padding:6px 12px; border:1px solid {{ t.border }}">Lead portrait — drop a photo here</span>
+        </div>
+      </div>
+
+      <div style="max-width:1000px; margin:0 auto; padding:28px 30px">
+        <blockquote style="font-family:'Instrument Serif', serif; font-weight:400; font-size:clamp(30px,4.8vw,58px); line-height:1.1; color:{{ t.accent }}; margin:0; max-width:20ch">“Leadership is mostly logistics, a little bravery, and remembering everyone’s name.”</blockquote>
+      </div>
+
+      <div style="max-width:1000px; margin:0 auto; padding:24px 30px 10px">
+        <sc-for list="{{ cur.roles }}" as="r" hint-placeholder-count="6">
+          <div style="border-top:1px solid {{ t.border }}; padding:36px 0; display:grid; grid-template-columns:1fr 2.5fr; gap:38px">
+            <div>
+              <div style="font-family:'Instrument Serif', serif; font-size:56px; color:{{ t.accent }}; line-height:.85">{{ r.no }}</div>
+              <div style="font-family:'Work Sans', sans-serif; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:{{ t.muted }}; margin-top:14px">{{ r.dates }}</div>
+              <div style="font-family:'Work Sans', sans-serif; font-size:12px; color:{{ t.muted }}; margin-top:4px">{{ r.place }}</div>
+            </div>
+            <div>
+              <div style="font-family:'Instrument Serif', serif; font-size:clamp(26px,3.4vw,40px); color:{{ t.fg }}; line-height:1.08">{{ r.role }}</div>
+              <div style="font-family:'Newsreader', serif; font-weight:600; font-size:17px; color:{{ t.accent }}; margin-top:6px">{{ r.org }}</div>
+              <div style="font-family:'Newsreader', serif; font-style:italic; font-size:14px; color:{{ t.muted }}; margin-top:3px">{{ r.orgDesc }}</div>
+              <div style="font-family:'Newsreader', serif; margin-top:18px; column-width:240px; column-gap:34px; font-size:16px; line-height:1.62; color:{{ t.fg }}">
+                <sc-for list="{{ r.points }}" as="pt" hint-placeholder-count="2">
+                  <p style="margin:0 0 12px; break-inside:avoid">{{ pt }}</p>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ======================= OTHER STUFF — zine / collage ======================= -->
+  <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+    <div style="animation:riseIn .5s ease both; overflow:hidden">
+      <div style="max-width:1140px; margin:0 auto; padding:52px 26px 12px">
+        <div style="font-family:'Space Mono', monospace; font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:{{ t.accent }}; transform:rotate(-2deg); display:inline-block; border:2px solid {{ t.accent }}; padding:5px 12px">off the clock ✦</div>
+        <h1 style="font-family:'Bricolage Grotesque', sans-serif; font-weight:800; font-size:clamp(46px,9.5vw,124px); line-height:.88; color:{{ t.fg }}; margin:20px 0 0; letter-spacing:-.03em">Other <span style="font-family:'Instrument Serif', serif; font-weight:400; font-style:italic; color:{{ t.accent }}">stuff</span> I love.</h1>
+        <p style="font-family:'Spectral', serif; font-size:clamp(17px,2vw,22px); line-height:1.5; color:{{ t.muted }}; margin-top:20px; max-width:52ch">{{ cur.intro }}</p>
+        <div style="font-family:'Space Mono', monospace; font-size:12.5px; color:{{ t.muted }}; border:1px dashed {{ t.border }}; padding:11px 15px; border-radius:10px; margin-top:26px; transform:rotate(.4deg); display:inline-block">// sample list — swap these for your own picks anytime</div>
+      </div>
+
+      <div style="max-width:1140px; margin:0 auto; padding:24px 26px 30px">
+        <sc-for list="{{ cur.readingSections }}" as="rs" hint-placeholder-count="3">
+          <div style="margin-bottom:52px">
+            <h2 style="font-family:'Bricolage Grotesque', sans-serif; font-weight:800; font-size:clamp(32px,5.5vw,64px); color:{{ rs.color }}; transform:rotate(-1deg); margin:0 0 26px; letter-spacing:-.02em; display:inline-block">{{ rs.name }}</h2>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:26px">
+              <sc-for list="{{ rs.items }}" as="it" hint-placeholder-count="3">
+                <div style="background:{{ it.color }}; color:#0e0d12; padding:22px 20px; border-radius:5px; transform:rotate({{ it.rot }}); box-shadow:7px 9px 0 rgba(0,0,0,.28); transition:transform .22s ease" style-hover="transform:rotate(0deg) translateY(-6px) scale(1.03)">
+                  <div style="font-family:'Space Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.1em; opacity:.72">{{ it.by }}</div>
+                  <div style="font-family:'Bricolage Grotesque', sans-serif; font-weight:800; font-size:23px; line-height:1.04; margin-top:9px">{{ it.title }}</div>
+                  <div style="font-family:'Spectral', serif; font-style:italic; font-size:14.5px; margin-top:14px; line-height:1.4">{{ it.note }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCategory }}" hint-placeholder-val="{{ false }}">
+    <div style="border-top:1px solid {{ t.border }}; margin-top:40px; padding:52px 28px 72px">
+      <div style="max-width:1120px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:34px">
+        <div>
+          <div style="font-family:{{ t.mono }}, monospace; font-size:12.5px; text-transform:uppercase; letter-spacing:.16em; color:{{ t.muted }}; margin-bottom:14px">Education</div>
+          <div style="font-family:{{ t.head }}, sans-serif; font-weight:600; font-size:16px">Johns Hopkins University</div>
+          <div style="font-size:14px; color:{{ t.muted }}; margin-top:3px">MS, Data Science · GPA 3.96 · 2026</div>
+          <div style="font-family:{{ t.head }}, sans-serif; font-weight:600; font-size:16px; margin-top:14px">IIT Bombay</div>
+          <div style="font-size:14px; color:{{ t.muted }}; margin-top:3px">B.Tech, Aerospace Engineering · 2022</div>
+        </div>
+        <div>
+          <div style="font-family:{{ t.mono }}, monospace; font-size:12.5px; text-transform:uppercase; letter-spacing:.16em; color:{{ t.muted }}; margin-bottom:14px">Get in touch</div>
+          <div style="display:flex; flex-direction:column; gap:9px; font-size:15px">
+            <a href="mailto:aswathsureshjhu@gmail.com" style="color:{{ t.accent }}; text-decoration:none">aswathsureshjhu@gmail.com</a>
+            <a href="tel:+14104937355" style="color:{{ t.fg }}; text-decoration:none">+1 (410) 493-7355</a>
+            <a href="https://www.linkedin.com/in/aswathsuresh25" target="_blank" style="color:{{ t.fg }}; text-decoration:none">linkedin.com/in/aswathsuresh25</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:{{ t.mono }}, monospace; font-size:12.5px; text-transform:uppercase; letter-spacing:.16em; color:{{ t.muted }}; margin-bottom:14px">Also</div>
+          <div style="font-size:14.5px; color:{{ t.fg }}; line-height:1.5">Semi-finalist, AstraZeneca National Healthcare Case Competition. Occasional stand-up comedian.</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:24px">
+      <div onClick="{{ stop }}" style="background:{{ t.surface }}; color:{{ t.fg }}; border:1px solid {{ t.border }}; border-radius:20px; max-width:560px; width:100%; padding:38px; position:relative; max-height:88vh; overflow:auto">
+        <button onClick="{{ closeModal }}" style="position:absolute; top:18px; right:18px; background:none; border:1px solid {{ t.border }}; color:{{ t.fg }}; width:34px; height:34px; border-radius:999px; cursor:pointer; font-size:16px">✕</button>
+        <div style="font-family:{{ t.head }}, sans-serif; font-weight:800; font-size:30px; letter-spacing:-.01em">Aswath Suresh</div>
+        <div style="color:{{ t.accent }}; font-size:15px; margin-top:4px; font-weight:600">Jack of many trades, master of one degree.</div>
+        <p style="font-size:15.5px; line-height:1.6; color:{{ t.fg }}; margin:20px 0 0">Recent MS Data Science grad from Johns Hopkins (B.Tech Aerospace, IIT Bombay). I ship AI products as a founding engineer, size markets as a strategy consultant, lead some of Hopkins' largest student orgs — and do stand-up on the side.</p>
+        <div style="display:flex; flex-direction:column; gap:11px; margin-top:24px">
+          <a href="mailto:aswathsureshjhu@gmail.com" style="color:{{ t.fg }}; text-decoration:none; border:1px solid {{ t.border }}; padding:12px 16px; border-radius:12px; font-size:15px">✉  aswathsureshjhu@gmail.com</a>
+          <a href="tel:+14104937355" style="color:{{ t.fg }}; text-decoration:none; border:1px solid {{ t.border }}; padding:12px 16px; border-radius:12px; font-size:15px">☎  +1 (410) 493-7355</a>
+          <a href="https://www.linkedin.com/in/aswathsuresh25" target="_blank" style="color:{{ t.fg }}; text-decoration:none; border:1px solid {{ t.border }}; padding:12px 16px; border-radius:12px; font-size:15px">in  linkedin.com/in/aswathsuresh25</a>
+        </div>
+        <button onClick="{{ downloadResume }}" style="margin-top:16px; width:100%; background:{{ t.accent }}; color:{{ t.accentText }}; border:none; padding:14px; border-radius:12px; font:inherit; font-weight:700; font-size:15px; cursor:pointer">Download Résumé ↓</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+<div style="position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; pointer-events:{{ overlayPE }}; opacity:{{ overlayOpacity }}; background:{{ overlayColor }}; color:{{ overlayFg }}; transition:opacity .42s ease; font-family:{{ overlayFont }}, sans-serif">
+  <div style="text-align:center">
+    <div style="font-family:{{ mono }}, monospace; font-size:13px; letter-spacing:.24em; text-transform:uppercase; opacity:.6">{{ overlayNum }}</div>
+    <div style="font-size:clamp(40px,8vw,110px); font-weight:800; letter-spacing:-.02em; margin-top:10px">{{ overlayLabel }}</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;showReadingList&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;techAccent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#39ff14&quot;,&quot;options&quot;:[&quot;#39ff14&quot;,&quot;#00e5ff&quot;,&quot;#ff5cf0&quot;,&quot;#ffd400&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = { view: 'landing', mode: null, overlayActive: false, overlayColor: '#000', overlayFg: '#fff', overlayLabel: '', overlayNum: '', overlayFont: "'Bricolage Grotesque'", modalOpen: false };
+
+  FONTS = {
+    tech:       { head: "'Space Grotesk'",       body: "'JetBrains Mono'", mono: "'JetBrains Mono'" },
+    consulting: { head: "'Spectral'",            body: "'Libre Franklin'", mono: "'Space Mono'" },
+    leadership: { head: "'Instrument Serif'",    body: "'Newsreader'",     mono: "'Work Sans'" },
+    reading:    { head: "'Bricolage Grotesque'", body: "'Spectral'",       mono: "'Space Mono'" },
+    landing:    { head: "'Bricolage Grotesque'", body: "'Space Grotesk'",  mono: "'Space Grotesk'" }
+  };
+
+  PAL = {
+    tech: {
+      dark:  { bg:'#05080a', surface:'#0b1013', fg:'#d8f5e7', muted:'#6f8a80', accent:'#39ff14', accent2:'#00e5ff', border:'#16241f', navBg:'rgba(5,8,10,.82)', accentText:'#05080a' },
+      light: { bg:'#eef3f0', surface:'#ffffff', fg:'#0b1013', muted:'#4f6b60', accent:'#0a8f3c', accent2:'#0782a0', border:'#cdddd4', navBg:'rgba(238,243,240,.85)', accentText:'#ffffff' }
+    },
+    consulting: {
+      light: { bg:'#ffffff', surface:'#f5f7fb', fg:'#0f2440', muted:'#5b6b82', accent:'#1a4d8f', accent2:'#b8912f', border:'#dde3ec', navBg:'rgba(255,255,255,.85)', accentText:'#ffffff' },
+      dark:  { bg:'#081120', surface:'#0f1f38', fg:'#e8eef7', muted:'#8ea3bf', accent:'#5b9bdc', accent2:'#d8b25a', border:'#1c3352', navBg:'rgba(8,17,32,.85)', accentText:'#081120' }
+    },
+    leadership: {
+      light: { bg:'#f6f0e6', surface:'#fbf7ef', fg:'#2a2620', muted:'#7a6f5f', accent:'#c0553b', accent2:'#4a6b57', border:'#e4dccc', navBg:'rgba(246,240,230,.85)', accentText:'#ffffff' },
+      dark:  { bg:'#201c17', surface:'#2a2620', fg:'#f0e8da', muted:'#a89a86', accent:'#e07a5f', accent2:'#82a58c', border:'#3a342b', navBg:'rgba(32,28,23,.85)', accentText:'#201c17' }
+    },
+    reading: {
+      light: { bg:'#f3efe6', surface:'#ffffff', fg:'#141210', muted:'#6b6459', accent:'#ff3b6b', accent2:'#2d5bff', border:'#e0d8c8', navBg:'rgba(243,239,230,.85)', accentText:'#ffffff' },
+      dark:  { bg:'#0e0d12', surface:'#17151d', fg:'#f2eee4', muted:'#9a93a6', accent:'#ff4d79', accent2:'#5b7bff', border:'#272430', navBg:'rgba(14,13,18,.85)', accentText:'#0e0d12' }
+    },
+    landing: {
+      dark:  { bg:'#0c0c0f', surface:'#151519', fg:'#f4f2ea', muted:'#8a8780', accent:'#f4f2ea', accent2:'#39ff14', border:'#26262c', navBg:'transparent', accentText:'#0c0c0f' },
+      light: { bg:'#f4f2ea', surface:'#ffffff', fg:'#141210', muted:'#6b6459', accent:'#141210', accent2:'#c0553b', border:'#ddd8cc', navBg:'transparent', accentText:'#ffffff' }
+    }
+  };
+
+  META = {
+    tech:       { name:'Tech', num:'01', tagline:'AI products, trading models, and full-stack systems.', panelBg:'#06090b', panelFg:'#39ff14', panelSub:'#7fe6b0', panelBorder:'#16241f', font:"'JetBrains Mono'" },
+    consulting: { name:'Consulting', num:'02', tagline:'Market sizing and GTM strategy for startups & climate tech.', panelBg:'#0f2440', panelFg:'#ffffff', panelSub:'#b8cbe6', panelBorder:'#24406a', font:"'Spectral'" },
+    leadership: { name:'Leadership', num:'03', tagline:'Running Hopkins\u2019 largest orgs, events, and case competitions.', panelBg:'#e8dcc8', panelFg:'#2a2620', panelSub:'#7a6f5f', panelBorder:'#d3c4a8', font:"'Instrument Serif'" },
+    reading:    { name:'Other Stuff', num:'04', tagline:'The books, films, and detours between projects.', panelBg:'#17151d', panelFg:'#ff8fb0', panelSub:'#8f9bff', panelBorder:'#2b2836', font:"'Bricolage Grotesque'" }
+  };
+
+  content = {
+    tech: {
+      kicker:'01 — Engineering & Data Science',
+      title:'I build AI products end to end.',
+      intro:'From founding-engineer full-stack systems to systematic trading research \u2014 turning models into shipped software across nine roles.',
+      metrics:[
+        { value:'~0.90', label:'Avg regression R\u00b2 on LSTM trading models' },
+        { value:'11.8K+', label:'News articles processed for sentiment' },
+        { value:'2M+', label:'Time-series points engineered from 20K' },
+        { value:'50%', label:'Backend response-time reduction' }
+      ],
+      roles:[
+        { dates:'Jan 2026 — Present', place:'Baltimore, MD', role:'Founding Engineer', org:'EligioAI', orgDesc:'AI platform for patient triage & clinician scheduling', points:[
+          'Architected a production, security-minded full-stack platform (React/Vite, Flask, PostgreSQL, Azure, OpenAI), replacing an unscalable no-code MVP.',
+          'Built an AI medical-document pipeline: PDF validation, OCR fallback, and LLM structured extraction for referral summaries & triage profiles.',
+          'Designed a knowledge-grounded clinical routing engine with deterministic fallbacks to cut manual referral review effort.'
+        ]},
+        { dates:'Jan 2026 — May 2026', place:'Baltimore, MD', role:'Data Scientist', org:'Campbell', orgDesc:'Quant firm — systematic futures & equities', points:[
+          'Built a crude-oil market-intelligence pipeline over 11.8K+ articles (FinBERT/CrudeBERT, PyTorch) with calibrated sentiment scoring.',
+          'Engineered a 32-factor dataset (5.3K+ daily obs); LSTM models reached ~0.90 avg R\u00b2.',
+          'Designed an institutional alpha-validation & backtest framework (Newey-West, quintiles, transaction costs) across WTI & Brent.'
+        ]},
+        { dates:'Dec 2024 — Jan 2025', place:'Baltimore, MD', role:'Data Science Intern', org:'Costac', orgDesc:'Analytics for SME finance & customer behavior', points:[
+          'Built ML pipelines (PyTorch, scikit-learn) predicting revenue & behavior at R\u00b2 0.85, cutting MSE 25%.',
+          'Implemented RNN/LSTM/GRU models for sequential time series, reaching 8.5% MAPE.'
+        ]},
+        { dates:'Feb 2024 — May 2024', place:'Chennai, India', role:'Research Intern', org:'IIT Madras', orgDesc:'AR/VR visualization research', points:[
+          'Reviewed 20+ papers on AR/VR visualization of high-dimensional data.',
+          'Led a cross-lab team building AR/VR dimensionality-reduction demos in Unity for faculty & industry.'
+        ]},
+        { dates:'Jun 2022 — Jun 2023', place:'Bengaluru, India', role:'Software Developer', org:'Teachmint', orgDesc:'EdTech platform', points:[
+          'Rebuilt a Python backend module, cutting response times 50% via better algorithms & OOP.',
+          'Unified disparate APIs into standard Flask (+60% efficiency); migrated 1M-point MongoDB collections (\u221220% latency).'
+        ]},
+        { dates:'Jun 2021 — Jul 2021', place:'Charlotte, NC', role:'Software Intern', org:'Jobsage.ai', orgDesc:'AI recruitment & job recommendation', points:[
+          'Automated hiring-data extraction from job-alert emails via Google Cloud, boosting throughput 80%.',
+          'Built a Flask API + cron to keep promo-code validity in sync, ensuring 15% revenue savings.'
+        ]},
+        { dates:'Apr 2020 — Jun 2020', place:'Mumbai, India', role:'Machine Learning Intern', org:'Sustlabs', orgDesc:'Residential energy analytics', points:[
+          'Scaled a 20K \u2192 2M-point time series; trained LSTM appliance-power models (R\u00b2 > 0.8).',
+          'Deployed models with Kafka for real-time predictions across 5K+ homes; visualized in Grafana/InfluxDB.'
+        ]},
+        { dates:'Dec 2019 — Jan 2020', place:'Mumbai, India', role:'Data Science Intern', org:'Floww', orgDesc:'SaaS ops platform for startups & MSMEs', points:[
+          'Scraped vehicle-spec data (BeautifulSoup) and benchmarked ML models to predict mileage.'
+        ]},
+        { dates:'Oct 2018 — Dec 2019', place:'Mumbai, India', role:'Member, Software Subsystem', org:'Rakshak — IITB UAV Team', orgDesc:'Drones for disaster response', points:[
+          'Built image datasets (OpenCV) and trained U-Net for semantic segmentation.'
+        ]}
+      ],
+      projects:[
+        { name:'Vector DB vs Knowledge Graph', meta:'RAG · LangChain · ChromaDB · GPT-4 · 2025', points:['6 chunking strategies, +35% retrieval accuracy over 1000+ chunks.','GraphRAG entity search hitting 90% relevance on complex queries.'] },
+        { name:'Multi-Modal Lip Reading', meta:'PyTorch · Fusion · 2025', points:['Audio + video + SBERT triple-modality fusion.','+37% absolute accuracy over unimodal baselines.'] },
+        { name:'AI Water-Quality Modeling', meta:'CNN/GRU/LSTM · IITB · 2023', points:['Ensemble + DL forecasting, +25% performance.','Genetic & Bayesian tuning for a further +10%.'] },
+        { name:'Fantasy T20 Cricket Optimizer', meta:'Genetic Algorithm · IITB · 2023', points:['Custom player metrics from 10+ factors.','Presented at NCMDAO, IIT Guwahati.'] },
+        { name:'Composite Structures Analysis', meta:'ML Regression · IITB · 2020', points:['Predicted Young\u2019s modulus & fracture points.','Compared parameters across compositions.'] },
+        { name:'IPL Data Analysis', meta:'EDA · IITB · 2019', points:['Hypothesis testing on ball-by-ball data.','Trend visualization across players & venues.'] },
+        { name:'React Sales Dashboard', meta:'React · Supabase · Chart.js', points:['Real-time sync via Postgres subscriptions.','Aggregations across $50K+ quarterly sales.'] },
+        { name:'Minimal Social Platform', meta:'Firebase · Firestore · Auth', points:['Google OAuth + real-time listeners.','Time-based filtering over 500+ posts.'] },
+        { name:'E-commerce PMS', meta:'Express · SQLite', points:['Normalized schema, full CRUD for inventory.','RESTful search over 100+ records.'] }
+      ],
+      skillsTech:['Python','JavaScript','SQL','PyTorch','TensorFlow','Pandas','Scikit-Learn','Git','Linux','Google Cloud','Excel'],
+      skillsDomain:['Deep Learning','Machine Learning','NLP','Frontend','Backend','Databases','Data Analysis','Optimization']
+    },
+
+    consulting: {
+      kicker:'02 — Strategy & Consulting',
+      title:'I turn ambiguity into a defensible market case.',
+      intro:'Case engagements sizing markets, building revenue models, and shaping go-to-market strategy for startups and climate tech.',
+      metrics:[
+        { value:'$1.12B', label:'U.S. TAM sized for Voiceitt 2.0' },
+        { value:'$660M', label:'Defensible TAM rebuilt for DWaste' },
+        { value:'35\u219245%', label:'Projected gross-margin lift for AquiPor' },
+        { value:'23+', label:'Third-party sources per market case' }
+      ],
+      roles:[
+        { dates:'Jan — May 2026', place:'Johns Hopkins', role:'Consultant', org:'JHU Graduate Consulting Club — Voiceitt 2.0', orgDesc:'Case prep, business training & firm networking', points:[
+          'Led a 5-person team building a research-based market-sizing model: ~564K supported patients and a $1.12B U.S. TAM via disease-level epidemiology & severity stratification.',
+          'Concentrated GTM on TBI (~$798M) and Parkinson\u2019s (~$267M) as the largest scalable pools.',
+          'Built a citation-backed 23-disease expansion pipeline to de-risk concentration beyond core cohorts.'
+        ]},
+        { dates:'Aug — Dec 2025', place:'Johns Hopkins', role:'Consultant', org:'AquiPor (via Breezwei)', orgDesc:'Climate tech — permeable concrete & stormwater', points:[
+          'Built pricing & market-entry strategy for a $10M opportunity; improved projected gross margin 35% \u2192 45%.',
+          'Modeled $25M Yr-5 revenue / $8M EBITDA across 3 segments to frame Series A decisions.',
+          'Recommended a public-sector-first GTM into a $2.3B municipal stormwater market; secured 3 pilots.'
+        ]},
+        { dates:'Jan — May 2026', place:'Johns Hopkins', role:'Consultant', org:'DWaste (via Breezwei)', orgDesc:'AI computer-vision waste sorting', points:[
+          'Rebuilt the market case from 23+ verified sources: $660M TAM, $89M\u2013$134M SAM across 4 segments.',
+          'Built a 3-year GTM model ($42M Yr-3) that tightened prior forecasts to improve investor credibility.'
+        ]},
+        { dates:'Aug 2025 — May 2026', place:'Johns Hopkins', role:'Partner, Data Analytics', org:'Breezwei', orgDesc:'Pro-bono advisory to sustainability startups', points:[
+          'Lead the data-analytics workstream making ventures investment-ready for VC scrutiny.',
+          'Formalized a sourcing pipeline with the incubator & Energy Research Institute to vet high-potential startups.'
+        ]},
+        { dates:'Aug — Dec 2025', place:'Johns Hopkins', role:'Director', org:'JHU Product Management Club', orgDesc:'PM skills through projects & events', points:[
+          'Led a team building a Business Model Canvas + GTM for an AR/VR startup, including competitor & pricing analysis.',
+          'Drove a multi-channel outreach strategy that lifted club visibility 30%.'
+        ]}
+      ],
+      skillsTech:[],
+      skillsDomain:[]
+    },
+
+    leadership: {
+      kicker:'03 — Leadership & Community',
+      title:'I build organizations and the events that fill them.',
+      intro:'From governing 2,500+ graduate students to launching an intercollegiate case competition, I lead teams that ship real experiences.',
+      roles:[
+        { dates:'Aug 2025 — May 2026', place:'Johns Hopkins', role:'Executive Board Member', org:'Graduate Representative Organization', orgDesc:'Governance body for 2,500+ grad students', points:[
+          'Directed the university\u2019s largest graduate organization and a cross-functional body of 35+ representatives.',
+          'Ran high-impact events for 2,000+ attendees on a $40K+ budget, lifting engagement 20%.',
+          'Synthesized student data into policy frameworks delivered to University Administration.'
+        ]},
+        { dates:'Aug 2025 — May 2026', place:'Johns Hopkins', role:'Co-President', org:'JHU Consulting Club', orgDesc:'Career prep & recruiter engagement', points:[
+          'Ran 6+ events and expanded reach to the grad community; partnered with Bain, BCG, Deloitte & Tuscany.',
+          'Launched JHU\u2019s inaugural Intercollegiate Case Competition — 25+ teams, 4+ universities, judges from Bain & Pfizer.'
+        ]},
+        { dates:'Apr 2025 — May 2026', place:'Johns Hopkins', role:'Event & Social Chair', org:'Stand Up Comedy Club', orgDesc:'We do stand-up. Or at least try to.', points:[
+          'Grew the performer base 300% and reached 500+ participants across workshops & shows.',
+          'Secured a $10K Blue Jay Dialogue grant blending comedy & dance to explore cultural identity.'
+        ]},
+        { dates:'Jan — Apr 2025', place:'Johns Hopkins', role:'Director, Design & Marketing', org:'Culture Show', orgDesc:'Hopkins\u2019 flagship cultural showcase', points:[
+          'Led creative direction & marketing for 15+ performance groups and 500+ attendees.',
+          'Managed a design team and coordinated 10+ volunteers for a zero-delay 3-hour live program.'
+        ]},
+        { dates:'Oct 2024 — May 2026', place:'Johns Hopkins', role:'Student Ambassador', org:'International Students at Hopkins', orgDesc:'Community & cultural integration', points:[
+          'Led orientation, community-engagement and cultural-inclusion programming for international students.',
+          'Ran movie nights & grocery trips (35+ attendees) that strengthened the support network.'
+        ]},
+        { dates:'Jan 2025 — May 2026', place:'Johns Hopkins', role:'Member', org:'Sustainable Hopkins Innovative Projects', orgDesc:'Campus sustainability initiatives', points:[
+          'Ran a 500+ item clothing drive, a pop-up thrift store, and food-recovery donations to local non-profits.'
+        ]},
+        { dates:'Aug 2019 — Feb 2020', place:'IIT Bombay', role:'Media & PR Coordinator', org:'Abhyuday', orgDesc:'India\u2019s largest student-run social org', points:[
+          'Managed 35+ campus representatives across India for health workshops, cleanups & outreach.',
+          'Drafted sponsorship proposals that secured funding for the flagship annual festival.'
+        ]}
+      ],
+      skillsTech:[],
+      skillsDomain:[]
+    },
+
+    reading: {
+      kicker:'04 — Off the Clock',
+      title:'What\u2019s on my shelf and my screen.',
+      intro:'A rotating, slightly chaotic list of the books, films, and ideas I\u2019m chewing on between projects.',
+      readingSections:[
+        { name:'On the shelf', items:[
+          { title:'Thinking in Systems', by:'Donella Meadows', note:'Mental models I keep coming back to.' },
+          { title:'The Making of a Manager', by:'Julie Zhuo', note:'For every new leadership role.' },
+          { title:'Antifragile', by:'Nassim Taleb', note:'How to gain from disorder.' }
+        ]},
+        { name:'On screen', items:[
+          { title:'Severance', by:'Series', note:'Work-life balance, taken literally.' },
+          { title:'Everything Everywhere All at Once', by:'Film', note:'Jack of many universes.' },
+          { title:'The Bear', by:'Series', note:'Chaos, teams, and shipping under pressure.' }
+        ]},
+        { name:'In the feed', items:[
+          { title:'Paul Graham Essays', by:'Longreads', note:'Startups and clear thinking.' },
+          { title:'Stratechery', by:'Ben Thompson', note:'Business strategy, weekly.' },
+          { title:'Distill.pub', by:'ML writing', note:'ML explained beautifully.' }
+        ]}
+      ]
+    }
+  };
+
+  componentDidMount() {
+    let m = null;
+    try { m = localStorage.getItem('asw_mode'); } catch (e) {}
+    if (!m) m = (this.props.defaultMode === 'light') ? 'light' : 'dark';
+    this.setState({ mode: m });
+  }
+
+  mode() { return this.state.mode || 'dark'; }
+
+  themeFor(view, mode) {
+    const base = (this.PAL[view] || this.PAL.landing);
+    const pal = base[mode] || base.dark || base.light;
+    const t = Object.assign({}, pal, this.FONTS[view] || this.FONTS.landing);
+    if (view === 'tech' && this.props.techAccent) { t.accent = this.props.techAccent; }
+    return t;
+  }
+
+  activeCats() {
+    let ids = ['tech', 'consulting', 'leadership', 'reading'];
+    if (this.props.showReadingList === false) ids = ids.filter(function (x) { return x !== 'reading'; });
+    return ids;
+  }
+
+  augment(view, cur) {
+    if (view === 'consulting') {
+      return Object.assign({}, cur, { roles: cur.roles.map(function (r, i) { return Object.assign({}, r, { no: String(i + 1).padStart(2, '0') }); }) });
+    }
+    if (view === 'tech') {
+      const hashes = ['a1f4c02', '7e9b31d', 'c4d88a0', '2b6f159', '9ac3e77', '04e1b6f', 'f38d0a2', '6c72e94', 'e5109bd'];
+      return Object.assign({}, cur, { roles: cur.roles.map(function (r, i) { return Object.assign({}, r, { hash: hashes[i % hashes.length] }); }) });
+    }
+    if (view === 'leadership') {
+      const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      return Object.assign({}, cur, { roles: cur.roles.map(function (r, i) { return Object.assign({}, r, { no: roman[i % roman.length] }); }) });
+    }
+    if (view === 'reading') {
+      const palette = ['#ff3b6b', '#2d5bff', '#ffcf2e', '#19c37d', '#a855f7'];
+      const rots = ['-2deg', '1.6deg', '-1deg', '2deg', '-1.4deg', '1deg'];
+      let k = 0;
+      return Object.assign({}, cur, { readingSections: cur.readingSections.map(function (rs) {
+        return Object.assign({}, rs, { items: rs.items.map(function (it) { const o = Object.assign({}, it, { color: palette[k % palette.length], rot: rots[k % rots.length] }); k++; return o; }) });
+      }) });
+    }
+    return cur;
+  }
+
+  transitionTo(view) {
+    if (view === this.state.view) { return; }
+    const mode = this.mode();
+    const tt = this.themeFor(view, mode);
+    const meta = this.META[view];
+    this.setState({
+      overlayActive: true,
+      overlayColor: tt.bg,
+      overlayFg: tt.accent,
+      overlayLabel: view === 'landing' ? 'Aswath Suresh' : meta.name,
+      overlayNum: view === 'landing' ? '' : meta.num,
+      overlayFont: tt.head
+    });
+    const self = this;
+    setTimeout(function () {
+      self.setState({ view: view, overlayActive: false });
+      try { window.scrollTo(0, 0); } catch (e) {}
+    }, 430);
+  }
+
+  toggleMode() {
+    const next = this.mode() === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('asw_mode', next); } catch (e) {}
+    this.setState({ mode: next });
+  }
+
+  downloadResume() {
+    const c = this.content;
+    let out = 'ASWATH SURESH\nJack of many trades, master of one degree.\naswathsureshjhu@gmail.com | +1 (410) 493-7355 | linkedin.com/in/aswathsuresh25\n\n';
+    out += 'EDUCATION\nJohns Hopkins University — MS, Data Science (GPA 3.96), 2026\nIIT Bombay — B.Tech, Aerospace Engineering, 2022\n\n';
+    const secs = [['TECH & DATA SCIENCE', 'tech'], ['CONSULTING', 'consulting'], ['LEADERSHIP', 'leadership']];
+    secs.forEach(function (s) {
+      out += s[0] + '\n';
+      (c[s[1]].roles || []).forEach(function (r) {
+        out += '\n' + r.role + ' | ' + r.org + ' | ' + r.place + ' | ' + r.dates + '\n';
+        r.points.forEach(function (p) { out += '  - ' + p + '\n'; });
+      });
+      out += '\n';
+    });
+    out += 'PROJECTS\n';
+    (c.tech.projects || []).forEach(function (p) { out += '\n' + p.name + ' (' + p.meta + ')\n'; p.points.forEach(function (x) { out += '  - ' + x + '\n'; }); });
+    out += '\nSKILLS\nTechnical: ' + c.tech.skillsTech.join(', ') + '\nDomain: ' + c.tech.skillsDomain.join(', ') + '\n';
+    try {
+      const blob = new Blob([out], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'Aswath_Suresh_Resume.txt';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    } catch (e) {}
+  }
+
+  renderVals() {
+    const view = this.state.view;
+    const mode = this.mode();
+    const isLanding = view === 'landing';
+    const t = this.themeFor(isLanding ? 'landing' : view, mode);
+    const self = this;
+
+    const cats = this.activeCats().map(function (id) {
+      const m = self.META[id];
+      const active = id === view;
+      return {
+        id: id, name: m.name, num: m.num, tagline: m.tagline,
+        panelBg: m.panelBg, panelFg: m.panelFg, panelSub: m.panelSub, panelBorder: m.panelBorder, font: m.font,
+        enter: function () { self.transitionTo(id); },
+        tabBg: active ? t.accent : 'transparent',
+        tabFg: active ? t.accentText : t.fg,
+        tabBorder: active ? t.accent : t.border
+      };
+    });
+
+    const cur = isLanding ? {} : this.augment(view, this.content[view]);
+
+    return {
+      t: t,
+      mono: this.FONTS.landing.mono,
+      isLanding: isLanding,
+      isCategory: !isLanding,
+      isTech: view === 'tech',
+      isConsulting: view === 'consulting',
+      isLeadership: view === 'leadership',
+      isOther: view === 'reading',
+      cats: cats,
+      cur: cur,
+      modeIcon: mode === 'dark' ? '\u2600' : '\u263e',
+      modalOpen: this.state.modalOpen,
+      openModal: function () { self.setState({ modalOpen: true }); },
+      closeModal: function () { self.setState({ modalOpen: false }); },
+      stop: function (e) { if (e && e.stopPropagation) e.stopPropagation(); },
+      toggleMode: function () { self.toggleMode(); },
+      goHome: function () { self.transitionTo('landing'); },
+      downloadResume: function () { self.downloadResume(); },
+      overlayActive: this.state.overlayActive,
+      overlayOpacity: this.state.overlayActive ? 1 : 0,
+      overlayPE: this.state.overlayActive ? 'auto' : 'none',
+      overlayColor: this.state.overlayColor,
+      overlayFg: this.state.overlayFg,
+      overlayLabel: this.state.overlayLabel,
+      overlayNum: this.state.overlayNum,
+      overlayFont: this.state.overlayFont
+    };
+  }
+}
+</script>
+</body>
+</html>
