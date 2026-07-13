@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import type { CategoryMeta, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
 import { PaintCanvas } from '../components/PaintCanvas';
@@ -145,14 +145,29 @@ const LINE_COLORS: Record<Exclude<ViewId, 'landing'>, string> = {
   reading: '#ff4d79',
 };
 
-const LINE_PATHS: Record<Exclude<ViewId, 'landing'>, string> = {
-  tech: 'M0,20 H14 V8 H28 V20 H42 V32 H56 V20 H100',
-  consulting: 'M0,20 H12 V17 H26 V14 H40 V12 H54 V10 H68 V9 H82 V8 H100',
-  leadership: 'M0,8 C15,8 20,28 35,26 C50,24 55,10 70,12 C85,14 90,20 100,20',
-  reading: 'M0,20 L6,14 L12,24 L18,16 L24,26 L30,18 L36,22 L42,14 L48,24 L54,17 L60,23 L66,15 L72,21 L78,13 L84,23 L90,17 L96,20 L100,19',
+// Point-sampled (rather than bezier/H-V path strings) so each line can be
+// perturbed per-point for the cursor "pluck" interaction below. Duplicate-x
+// pairs fake the right-angle jumps for Tech/Consulting's chart look.
+const LINE_POINTS: Record<Exclude<ViewId, 'landing'>, [number, number][]> = {
+  tech: [
+    [0, 20], [14, 20], [14, 8], [28, 8], [28, 20],
+    [42, 20], [42, 32], [56, 32], [56, 20], [100, 20],
+  ],
+  consulting: [
+    [0, 20], [12, 20], [12, 17], [26, 17], [26, 14], [40, 14],
+    [40, 12], [54, 12], [54, 10], [68, 10], [68, 9], [82, 9], [82, 8], [100, 8],
+  ],
+  leadership: [
+    [0, 8], [10, 9], [20, 17], [30, 25], [35, 26], [45, 25],
+    [55, 14], [65, 11], [70, 12], [80, 15], [90, 19], [100, 20],
+  ],
+  reading: [
+    [0, 20], [6, 14], [12, 24], [18, 16], [24, 26], [30, 18], [36, 22], [42, 14], [48, 24],
+    [54, 17], [60, 23], [66, 15], [72, 21], [78, 13], [84, 23], [90, 17], [96, 20], [100, 19],
+  ],
 };
 
-// Where each path starts vertically (0-40 viewBox units) — matches the
+// Where each line starts vertically (0-40 viewBox units) — matches the
 // previous panel's end point so the boundary dot sits exactly on the line.
 const LINE_START_Y: Record<Exclude<ViewId, 'landing'>, number> = { tech: 20, consulting: 20, leadership: 8, reading: 20 };
 
@@ -162,6 +177,110 @@ const PANEL_TAGS: Record<Exclude<ViewId, 'landing'>, string> = {
   leadership: 'VOL. 04',
   reading: 'TRACK 07',
 };
+
+function pointsToPath(points: [number, number][], offsets: Float32Array) {
+  return points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${(y + offsets[i]).toFixed(2)}`).join(' ');
+}
+
+function valueAtX(points: [number, number][], x: number) {
+  for (let i = 0; i < points.length - 1; i++) {
+    const [x0, y0] = points[i];
+    const [x1, y1] = points[i + 1];
+    if (x >= x0 && x <= x1) {
+      if (x1 === x0) return y1;
+      return y0 + (y1 - y0) * ((x - x0) / (x1 - x0));
+    }
+  }
+  return points[points.length - 1][1];
+}
+
+// A damped spring per point: crossing near the stroke kicks nearby points
+// with an impulse (sign alternating point-to-point so it reads as a shake,
+// not a single shove), then they oscillate back to rest on their own —
+// same feel as flicking a taut wire. Runs off refs + direct DOM writes to
+// the path's `d` attribute rather than React state, so 60fps doesn't mean
+// 60fps of re-renders.
+const SPRING_STIFFNESS = 90;
+const SPRING_DAMPING = 6;
+
+function ShakyLine({ points, color }: { points: [number, number][]; color: string }) {
+  const pathRef = useRef<SVGPathElement>(null);
+  const offsets = useRef(new Float32Array(points.length));
+  const velocities = useRef(new Float32Array(points.length));
+  const rafRef = useRef<number | null>(null);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  function tick() {
+    const dt = 1 / 60;
+    let energy = 0;
+    for (let i = 0; i < points.length; i++) {
+      const o = offsets.current[i];
+      const v = velocities.current[i];
+      const nv = v + (-SPRING_STIFFNESS * o - SPRING_DAMPING * v) * dt;
+      const no = o + nv * dt;
+      velocities.current[i] = nv;
+      offsets.current[i] = no;
+      energy += Math.abs(no) + Math.abs(nv);
+    }
+    pathRef.current?.setAttribute('d', pointsToPath(points, offsets.current));
+    if (energy > 0.03) {
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      rafRef.current = null;
+      offsets.current.fill(0);
+      velocities.current.fill(0);
+      pathRef.current?.setAttribute('d', pointsToPath(points, offsets.current));
+    }
+  }
+
+  function handleMove(e: ReactMouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const localX = ((e.clientX - rect.left) / rect.width) * 100;
+    const localY = ((e.clientY - rect.top) / rect.height) * 40;
+    const last = lastPos.current;
+    lastPos.current = { x: localX, y: localY };
+    if (localX < 0 || localX > 100) return;
+    if (Math.abs(localY - valueAtX(points, localX)) > 7) return; // only react near the actual stroke
+
+    const speed = last ? Math.min(Math.hypot(localX - last.x, localY - last.y) * 8, 50) : 14;
+    const impulse = 10 + speed * 0.9;
+    const sigma = 12;
+    for (let i = 0; i < points.length; i++) {
+      const dx = points[i][0] - localX;
+      const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+      velocities.current[i] += w * impulse * (i % 2 === 0 ? 1 : -1);
+    }
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+  }
+
+  return (
+    <svg
+      viewBox="0 0 100 40"
+      preserveAspectRatio="none"
+      onMouseMove={handleMove}
+      style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}
+    >
+      <path
+        ref={pathRef}
+        d={pointsToPath(points, offsets.current)}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0.62}
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
 
 function PanelMotif({ id, fg, first }: { id: Exclude<ViewId, 'landing'>; fg: string; first: boolean }) {
   let texture: ReactNode = null;
@@ -227,18 +346,7 @@ function PanelMotif({ id, fg, first }: { id: Exclude<ViewId, 'landing'>; fg: str
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
       {texture}
       <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}>
-          <path
-            d={LINE_PATHS[id]}
-            fill="none"
-            stroke={lineColor}
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={0.62}
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
+        <ShakyLine points={LINE_POINTS[id]} color={lineColor} />
         {!first && (
           <span
             style={{
