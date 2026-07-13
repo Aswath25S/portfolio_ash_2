@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CategoryMeta, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
 import { PaintCanvas } from '../components/PaintCanvas';
@@ -131,11 +131,43 @@ interface LandingViewProps {
 // visual language: scanlines for Tech's terminal, ruled lines for
 // Consulting's report, a pull-quote mark for Leadership's magazine, confetti
 // for the reading list's collage.
-function PanelMotif({ id, fg }: { id: CategoryMeta['id']; fg: string }) {
+//
+// A second layer — one continuous "signal" line — runs through all four
+// panels on top of that, changing character per section (digital step-wave,
+// ascending chart, smooth curve, jittery scribble) while its start/end
+// heights line up across panel boundaries so it still reads as one trace
+// even though each segment is really just that panel's own SVG stretched to
+// fill its (hover-animated) width.
+const LINE_COLORS: Record<Exclude<ViewId, 'landing'>, string> = {
+  tech: '#39ff14',
+  consulting: '#5b9bdc',
+  leadership: '#c0553b',
+  reading: '#ff4d79',
+};
+
+const LINE_PATHS: Record<Exclude<ViewId, 'landing'>, string> = {
+  tech: 'M0,20 H14 V8 H28 V20 H42 V32 H56 V20 H100',
+  consulting: 'M0,20 H12 V17 H26 V14 H40 V12 H54 V10 H68 V9 H82 V8 H100',
+  leadership: 'M0,8 C15,8 20,28 35,26 C50,24 55,10 70,12 C85,14 90,20 100,20',
+  reading: 'M0,20 L6,14 L12,24 L18,16 L24,26 L30,18 L36,22 L42,14 L48,24 L54,17 L60,23 L66,15 L72,21 L78,13 L84,23 L90,17 L96,20 L100,19',
+};
+
+// Where each path starts vertically (0-40 viewBox units) — matches the
+// previous panel's end point so the boundary dot sits exactly on the line.
+const LINE_START_Y: Record<Exclude<ViewId, 'landing'>, number> = { tech: 20, consulting: 20, leadership: 8, reading: 20 };
+
+const PANEL_TAGS: Record<Exclude<ViewId, 'landing'>, string> = {
+  tech: 'PID 4102',
+  consulting: 'Q3 FY26',
+  leadership: 'VOL. 04',
+  reading: 'TRACK 07',
+};
+
+function PanelMotif({ id, fg, first }: { id: Exclude<ViewId, 'landing'>; fg: string; first: boolean }) {
+  let texture: ReactNode = null;
   if (id === 'tech') {
-    return (
+    texture = (
       <div
-        aria-hidden
         style={{
           position: 'absolute',
           inset: 0,
@@ -143,11 +175,9 @@ function PanelMotif({ id, fg }: { id: CategoryMeta['id']; fg: string }) {
         }}
       />
     );
-  }
-  if (id === 'consulting') {
-    return (
+  } else if (id === 'consulting') {
+    texture = (
       <div
-        aria-hidden
         style={{
           position: 'absolute',
           inset: 0,
@@ -155,11 +185,9 @@ function PanelMotif({ id, fg }: { id: CategoryMeta['id']; fg: string }) {
         }}
       />
     );
-  }
-  if (id === 'leadership') {
-    return (
+  } else if (id === 'leadership') {
+    texture = (
       <div
-        aria-hidden
         style={{
           position: 'absolute',
           right: -18,
@@ -174,25 +202,67 @@ function PanelMotif({ id, fg }: { id: CategoryMeta['id']; fg: string }) {
         &rdquo;
       </div>
     );
+  } else {
+    const marks = [
+      { sym: '✳', top: '20%', left: '74%', size: 28, rot: '-10deg', color: '#ff3b6b' },
+      { sym: '✦', top: '46%', left: '16%', size: 20, rot: '8deg', color: '#2d5bff' },
+      { sym: '●', top: '64%', left: '78%', size: 13, rot: '0deg', color: '#ffcf2e' },
+      { sym: '✳', top: '80%', left: '32%', size: 17, rot: '16deg', color: '#19c37d' },
+    ];
+    texture = (
+      <div style={{ position: 'absolute', inset: 0 }}>
+        {marks.map((m, i) => (
+          <span key={i} style={{ position: 'absolute', top: m.top, left: m.left, fontSize: m.size, color: m.color, opacity: 0.4, transform: `rotate(${m.rot})` }}>
+            {m.sym}
+          </span>
+        ))}
+      </div>
+    );
   }
-  const marks = [
-    { sym: '✳', top: '20%', left: '74%', size: 28, rot: '-10deg', color: '#ff3b6b' },
-    { sym: '✦', top: '46%', left: '16%', size: 20, rot: '8deg', color: '#2d5bff' },
-    { sym: '●', top: '64%', left: '78%', size: 13, rot: '0deg', color: '#ffcf2e' },
-    { sym: '✳', top: '80%', left: '32%', size: 17, rot: '16deg', color: '#19c37d' },
-  ];
+
+  const lineColor = LINE_COLORS[id];
+  const startY = LINE_START_Y[id];
+
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
-      {marks.map((m, i) => (
-        <span key={i} style={{ position: 'absolute', top: m.top, left: m.left, fontSize: m.size, color: m.color, opacity: 0.4, transform: `rotate(${m.rot})` }}>
-          {m.sym}
-        </span>
-      ))}
+      {texture}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
+        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}>
+          <path
+            d={LINE_PATHS[id]}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={0.62}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {!first && (
+          <span
+            style={{
+              position: 'absolute',
+              left: -3,
+              top: `${(startY / 40) * 100}%`,
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: lineColor,
+              transform: 'translateY(-50%)',
+              boxShadow: `0 0 8px ${lineColor}`,
+            }}
+          />
+        )}
+      </div>
+      <div style={{ position: 'absolute', top: 24, right: 22, fontFamily: "'Space Mono', monospace", fontSize: 11, letterSpacing: '.14em', color: lineColor, opacity: 0.65 }}>
+        {PANEL_TAGS[id]}
+      </div>
     </div>
   );
 }
 
-function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) => void }) {
+function LandingPanel({ p, onEnter, first }: { p: CategoryMeta; onEnter: (id: ViewId) => void; first: boolean }) {
   const [hovered, handlers] = useHover();
   return (
     <div
@@ -217,7 +287,7 @@ function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) =
         boxShadow: hovered ? '0 26px 70px rgba(0,0,0,.4)' : 'none',
       }}
     >
-      <PanelMotif id={p.id} fg={p.panelFg} />
+      <PanelMotif id={p.id as Exclude<ViewId, 'landing'>} fg={p.panelFg} first={first} />
       <div style={{ position: 'relative' }}>
         <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.16em', opacity: 0.65 }}>{p.num}</div>
         <div
@@ -277,8 +347,8 @@ export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, o
       </div>
 
       <div style={{ flex: '1 1 auto', display: 'flex', gap: 14, padding: '18px 20px 26px', position: 'relative', zIndex: 1 }}>
-        {cats.map((p) => (
-          <LandingPanel key={p.id} p={p} onEnter={onEnter} />
+        {cats.map((p, i) => (
+          <LandingPanel key={p.id} p={p} onEnter={onEnter} first={i === 0} />
         ))}
       </div>
     </div>
