@@ -19,9 +19,11 @@ export function CategoryFooter({ t }: CategoryFooterProps) {
           <div style={{ fontFamily: `${t.mono}, monospace`, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '.16em', color: t.muted, marginBottom: 14 }}>Get in touch</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, fontSize: 15 }}>
             <a href="mailto:aswathsureshjhu@gmail.com" style={{ color: t.accent, textDecoration: 'none' }}>aswathsureshjhu@gmail.com</a>
-            <a href="tel:+14104937355" style={{ color: t.fg, textDecoration: 'none' }}>+1 (410) 493-7355</a>
             <a href="https://www.linkedin.com/in/aswathsuresh25" target="_blank" rel="noreferrer" style={{ color: t.fg, textDecoration: 'none' }}>
               linkedin.com/in/aswathsuresh25
+            </a>
+            <a href="https://github.com/Aswath25S" target="_blank" rel="noreferrer" style={{ color: t.fg, textDecoration: 'none' }}>
+              github.com/Aswath25S
             </a>
           </div>
         </div>

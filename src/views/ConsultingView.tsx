@@ -35,7 +35,6 @@ export function ConsultingView({ t }: ConsultingViewProps) {
                   <span>{r.dates}</span>
                   <span>{r.place}</span>
                 </div>
-                <div style={{ fontSize: 14, color: t.muted, marginTop: 6, fontStyle: 'italic' }}>{r.orgDesc}</div>
                 <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '16px 1fr', gap: 10, fontSize: 15, lineHeight: 1.55, color: t.fg }}>
                   <span style={{ color: t.accent2, fontWeight: 700 }}>▸</span>
                   <span>{r.summary}</span>

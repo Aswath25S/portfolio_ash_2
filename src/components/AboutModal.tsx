@@ -53,8 +53,13 @@ export function AboutModal({ t, onClose, onDownloadResume }: AboutModalProps) {
           <a href="mailto:aswathsureshjhu@gmail.com" style={{ color: t.fg, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '12px 16px', borderRadius: 12, fontSize: 15 }}>
             ✉ aswathsureshjhu@gmail.com
           </a>
-          <a href="tel:+14104937355" style={{ color: t.fg, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '12px 16px', borderRadius: 12, fontSize: 15 }}>
-            ☎ +1 (410) 493-7355
+          <a
+            href="https://github.com/Aswath25S"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: t.fg, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '12px 16px', borderRadius: 12, fontSize: 15 }}
+          >
+            gh github.com/Aswath25S
           </a>
           <a
             href="https://www.linkedin.com/in/aswathsuresh25"

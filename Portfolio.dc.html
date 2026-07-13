@@ -199,7 +199,6 @@
                 <div style="display:flex; gap:18px; flex-wrap:wrap; font-family:'Space Mono', monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:{{ t.muted }}; margin-top:8px">
                   <span style="color:{{ t.accent }}">{{ r.role }}</span><span>{{ r.dates }}</span><span>{{ r.place }}</span>
                 </div>
-                <div style="font-size:14px; color:{{ t.muted }}; margin-top:6px; font-style:italic">{{ r.orgDesc }}</div>
                 <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px">
                   <sc-for list="{{ r.points }}" as="pt" hint-placeholder-count="2">
                     <div style="display:grid; grid-template-columns:16px 1fr; gap:10px; font-size:15px; line-height:1.55; color:{{ t.fg }}"><span style="color:{{ t.accent2 }}; font-weight:700">›</span><span>{{ pt }}</span></div>
@@ -450,23 +449,27 @@ class Component extends DCLogic {
       title:'I turn ambiguity into a defensible market case.',
       intro:'Case engagements sizing markets, building revenue models, and shaping go-to-market strategy for startups and climate tech.',
       metrics:[
-        { value:'$1.12B', label:'U.S. TAM sized for Voiceitt 2.0' },
-        { value:'$660M', label:'Defensible TAM rebuilt for DWaste' },
-        { value:'35\u219245%', label:'Projected gross-margin lift for AquiPor' },
+        { value:'$1.12B', label:'U.S. TAM sized for an assistive-speech tech client' },
+        { value:'$660M', label:'Defensible TAM rebuilt for an AI waste-sorting client' },
+        { value:'35\u219245%', label:'Projected gross-margin lift for a sustainable-concrete client' },
         { value:'23+', label:'Third-party sources per market case' }
       ],
       roles:[
-        { dates:'Jan — May 2026', place:'Johns Hopkins', role:'Consultant', org:'JHU Graduate Consulting Club — Voiceitt 2.0', orgDesc:'Case prep, business training & firm networking', points:[
+        { dates:'Aug 2025 — May 2026', place:'Johns Hopkins', role:'Co-President', org:'JHU Graduate Consulting Club', orgDesc:'Case prep, business training & firm networking', points:[
+          'Ran 6+ events and expanded reach to the grad community; partnered with Bain, BCG, Deloitte & Tuscany.',
+          'Launched JHU\u2019s inaugural Intercollegiate Case Competition — 25+ teams, 4+ universities, judges from Bain & Pfizer.'
+        ]},
+        { dates:'Jan — May 2026', place:'Johns Hopkins', role:'Consultant', org:'Assistive-Speech Tech Startup', orgDesc:'Case prep, business training & firm networking', points:[
           'Led a 5-person team building a research-based market-sizing model: ~564K supported patients and a $1.12B U.S. TAM via disease-level epidemiology & severity stratification.',
           'Concentrated GTM on TBI (~$798M) and Parkinson\u2019s (~$267M) as the largest scalable pools.',
           'Built a citation-backed 23-disease expansion pipeline to de-risk concentration beyond core cohorts.'
         ]},
-        { dates:'Aug — Dec 2025', place:'Johns Hopkins', role:'Consultant', org:'AquiPor (via Breezwei)', orgDesc:'Climate tech — permeable concrete & stormwater', points:[
+        { dates:'Aug — Dec 2025', place:'Johns Hopkins', role:'Consultant', org:'Sustainable Concrete Startup', orgDesc:'Climate tech — permeable concrete & stormwater', points:[
           'Built pricing & market-entry strategy for a $10M opportunity; improved projected gross margin 35% \u2192 45%.',
           'Modeled $25M Yr-5 revenue / $8M EBITDA across 3 segments to frame Series A decisions.',
           'Recommended a public-sector-first GTM into a $2.3B municipal stormwater market; secured 3 pilots.'
         ]},
-        { dates:'Jan — May 2026', place:'Johns Hopkins', role:'Consultant', org:'DWaste (via Breezwei)', orgDesc:'AI computer-vision waste sorting', points:[
+        { dates:'Jan — May 2026', place:'Johns Hopkins', role:'Consultant', org:'AI Waste-Sorting Startup', orgDesc:'AI computer-vision waste sorting', points:[
           'Rebuilt the market case from 23+ verified sources: $660M TAM, $89M\u2013$134M SAM across 4 segments.',
           'Built a 3-year GTM model ($42M Yr-3) that tightened prior forecasts to improve investor credibility.'
         ]},
@@ -474,7 +477,7 @@ class Component extends DCLogic {
           'Lead the data-analytics workstream making ventures investment-ready for VC scrutiny.',
           'Formalized a sourcing pipeline with the incubator & Energy Research Institute to vet high-potential startups.'
         ]},
-        { dates:'Aug — Dec 2025', place:'Johns Hopkins', role:'Director', org:'JHU Product Management Club', orgDesc:'PM skills through projects & events', points:[
+        { dates:'Aug — Dec 2025', place:'Johns Hopkins', role:'Director', org:'AR/VR Startup', orgDesc:'PM skills through projects & events', points:[
           'Led a team building a Business Model Canvas + GTM for an AR/VR startup, including competitor & pricing analysis.',
           'Drove a multi-channel outreach strategy that lifted club visibility 30%.'
         ]}

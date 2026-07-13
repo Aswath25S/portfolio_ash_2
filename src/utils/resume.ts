@@ -2,7 +2,7 @@ import { content } from '../data/content';
 
 export function downloadResume() {
   const c = content;
-  let out = 'ASWATH SURESH\nJack of many trades, master of one degree.\naswathsureshjhu@gmail.com | +1 (410) 493-7355 | linkedin.com/in/aswathsuresh25\n\n';
+  let out = 'ASWATH SURESH\nJack of many trades, master of one degree.\naswathsureshjhu@gmail.com | linkedin.com/in/aswathsuresh25 | github.com/Aswath25S\n\n';
   out += 'EDUCATION\nJohns Hopkins University — MS, Data Science (GPA 3.96), 2026\nIIT Bombay — B.Tech, Aerospace Engineering, 2022\n\n';
 
   const secs: Array<[string, 'tech' | 'consulting' | 'leadership']> = [
