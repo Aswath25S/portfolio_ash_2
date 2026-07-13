@@ -22,21 +22,6 @@ export function ConsultingView({ t }: ConsultingViewProps) {
         <p style={{ maxWidth: '62ch', fontSize: 17.5, lineHeight: 1.6, color: t.muted, marginTop: 20 }}>{cur.intro}</p>
       </div>
 
-      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '34px 28px 8px' }}>
-        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, letterSpacing: '.18em', textTransform: 'uppercase', color: t.accent2, marginBottom: 16 }}>
-          Exhibit A — Impact at a glance
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', borderTop: `1px solid ${t.border}`, borderLeft: `1px solid ${t.border}` }}>
-          {cur.metrics.map((m, i) => (
-            <div key={i} style={{ padding: '26px 24px', borderRight: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}` }}>
-              <div style={{ fontFamily: "'Spectral', serif", fontSize: 'clamp(30px,3.6vw,48px)', fontWeight: 600, color: t.accent, lineHeight: 1 }}>{m.value}</div>
-              <div style={{ width: 36, height: 3, background: t.accent2, margin: '14px 0' }} />
-              <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.45 }}>{m.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '44px 28px 10px' }}>
         <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, letterSpacing: '.18em', textTransform: 'uppercase', color: t.accent2 }}>Selected Engagements</div>
         <div style={{ marginTop: 8 }}>
@@ -51,13 +36,9 @@ export function ConsultingView({ t }: ConsultingViewProps) {
                   <span>{r.place}</span>
                 </div>
                 <div style={{ fontSize: 14, color: t.muted, marginTop: 6, fontStyle: 'italic' }}>{r.orgDesc}</div>
-                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {r.points.map((pt, j) => (
-                    <div key={j} style={{ display: 'grid', gridTemplateColumns: '16px 1fr', gap: 10, fontSize: 15, lineHeight: 1.55, color: t.fg }}>
-                      <span style={{ color: t.accent2, fontWeight: 700 }}>▸</span>
-                      <span>{pt}</span>
-                    </div>
-                  ))}
+                <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '16px 1fr', gap: 10, fontSize: 15, lineHeight: 1.55, color: t.fg }}>
+                  <span style={{ color: t.accent2, fontWeight: 700 }}>▸</span>
+                  <span>{r.summary}</span>
                 </div>
               </div>
             </div>

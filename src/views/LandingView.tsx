@@ -51,52 +51,68 @@ function TradesWord() {
   }, []);
 
   // -1 is the sentinel for "trades" — keeping it in the same index space as
-  // the cycling words means the very first swap goes through the identical
-  // fade-out/fade-in sequence as every later one, instead of popping in
-  // instantly because the render showing hovered=true beats the effect that
-  // would otherwise kick off the fade.
+  // the cycling words means the very first swap gets the identical crossfade
+  // treatment as every later one, instead of popping in instantly because
+  // the render showing hovered=true beats the effect that kicks off the fade.
   const [idx, setIdx] = useState(-1);
-  const [fading, setFading] = useState(false);
+  const [outgoing, setOutgoing] = useState<{ idx: number; token: number } | null>(null);
+  const idxRef = useRef(-1);
+  const tokenRef = useRef(0);
+
+  // True crossfade: the outgoing word animates out while the incoming one
+  // animates in at the same time, instead of fading to nothing and back —
+  // that gap read as an abrupt blink rather than a smooth transition.
+  function advance(next: number) {
+    const prev = idxRef.current;
+    idxRef.current = next;
+    const token = ++tokenRef.current;
+    setOutgoing({ idx: prev, token });
+    setIdx(next);
+    window.setTimeout(() => {
+      setOutgoing((o) => (o && o.token === token ? null : o));
+    }, 360);
+  }
 
   useEffect(() => {
     if (!hovered) {
-      setIdx(-1);
-      setFading(false);
+      advance(-1);
       return;
     }
     let next = 0;
-    let fadeTimeout: number;
-    function reveal() {
-      setFading(true);
-      fadeTimeout = window.setTimeout(() => {
-        setIdx(next);
-        setFading(false);
-      }, 220);
-    }
-    reveal();
+    advance(next);
     const id = window.setInterval(() => {
       next = (next + 1) % TRADE_WORDS.length;
-      reveal();
+      advance(next);
     }, 780);
-    return () => {
-      window.clearTimeout(fadeTimeout);
-      window.clearInterval(id);
-    };
+    return () => window.clearInterval(id);
   }, [hovered]);
 
-  const current = idx >= 0 ? TRADE_WORDS[idx] : null;
+  const wordAt = (i: number) => (i >= 0 ? TRADE_WORDS[i] : { word: 'trades', color: undefined });
+  const current = wordAt(idx);
+  const leaving = outgoing ? wordAt(outgoing.idx) : null;
 
   return (
-    <span
-      ref={spanRef}
-      style={{
-        display: 'inline-block',
-        color: current?.color,
-        opacity: fading ? 0 : 1,
-        transition: 'opacity .22s ease, color .35s ease',
-      }}
-    >
-      {current ? current.word : 'trades'}
+    <span ref={spanRef} style={{ position: 'relative', display: 'inline-block' }}>
+      {leaving && (
+        <span
+          key={outgoing!.token}
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            display: 'inline-block',
+            color: leaving.color,
+            animation: 'wordOut .32s ease forwards',
+            pointerEvents: 'none',
+          }}
+        >
+          {leaving.word}
+        </span>
+      )}
+      <span key={idx} style={{ display: 'inline-block', color: current.color, animation: 'wordIn .32s ease' }}>
+        {current.word}
+      </span>
     </span>
   );
 }

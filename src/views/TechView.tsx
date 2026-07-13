@@ -23,12 +23,8 @@ function ProjectCard({ pr, t }: { pr: (typeof content.tech.projects)[number]; t:
       <div style={{ color: t.accent2, fontSize: 11.5 }}>~/projects/</div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16.5, fontWeight: 600, color: t.fg, marginTop: 2, lineHeight: 1.2 }}>{pr.name}</div>
       <div style={{ fontSize: 11.5, color: t.muted, marginTop: 4 }}>{pr.meta}</div>
-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {pr.points.map((pt, i) => (
-          <div key={i} style={{ fontSize: 13, lineHeight: 1.5, color: t.fg, paddingLeft: 15, textIndent: '-15px' }}>
-            <span style={{ color: t.accent }}>{'> '}</span>{pt}
-          </div>
-        ))}
+      <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.5, color: t.fg, paddingLeft: 15, textIndent: '-15px' }}>
+        <span style={{ color: t.accent }}>{'> '}</span>{pr.summary}
       </div>
     </div>
   );
@@ -74,20 +70,6 @@ export function TechView({ t }: TechViewProps) {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '26px 22px', fontFamily: "'JetBrains Mono', monospace" }}>
-        <div style={{ fontSize: 13, color: t.muted, marginBottom: 14 }}>
-          <span style={{ color: t.accent }}>$</span> stats --summary
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 1, background: t.border, border: `1px solid ${t.border}`, borderRadius: 10, overflow: 'hidden' }}>
-          {cur.metrics.map((m, i) => (
-            <div key={i} style={{ background: t.surface, padding: '18px 18px 20px' }}>
-              <div style={{ color: t.accent, fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(26px,3vw,34px)', fontWeight: 700, lineHeight: 1 }}>{m.value}</div>
-              <div style={{ color: t.muted, fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>{m.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div style={{ maxWidth: 1060, margin: '0 auto', padding: '32px 22px', fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 22 }}>
           <span style={{ color: t.accent }}>$</span> git log --experience
@@ -102,12 +84,8 @@ export function TechView({ t }: TechViewProps) {
                 {r.role} <span style={{ color: t.accent }}>@ {r.org}</span>
               </div>
               <div style={{ fontSize: 12.5, color: t.muted, marginTop: 2 }}>{r.orgDesc}</div>
-              <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {r.points.map((pt, j) => (
-                  <div key={j} style={{ fontSize: 14, lineHeight: 1.55, color: t.fg, paddingLeft: 16, textIndent: '-16px' }}>
-                    <span style={{ color: t.accent }}>+ </span>{pt}
-                  </div>
-                ))}
+              <div style={{ marginTop: 11, fontSize: 14, lineHeight: 1.55, color: t.fg, paddingLeft: 16, textIndent: '-16px' }}>
+                <span style={{ color: t.accent }}>+ </span>{r.summary}
               </div>
             </div>
           ))}

@@ -28,7 +28,7 @@ export function CategoryFooter({ t }: CategoryFooterProps) {
         <div>
           <div style={{ fontFamily: `${t.mono}, monospace`, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '.16em', color: t.muted, marginBottom: 14 }}>Also</div>
           <div style={{ fontSize: 14.5, color: t.fg, lineHeight: 1.5 }}>
-            Semi-finalist, AstraZeneca National Healthcare Case Competition. Occasional stand-up comedian.
+            Occasional stand-up comedian.
           </div>
         </div>
       </div>

@@ -61,12 +61,8 @@ export function LeadershipView({ t }: LeadershipViewProps) {
               <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(26px,3.4vw,40px)', color: t.fg, lineHeight: 1.08 }}>{r.role}</div>
               <div style={{ fontFamily: "'Newsreader', serif", fontWeight: 600, fontSize: 17, color: t.accent, marginTop: 6 }}>{r.org}</div>
               <div style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontSize: 14, color: t.muted, marginTop: 3 }}>{r.orgDesc}</div>
-              <div style={{ fontFamily: "'Newsreader', serif", marginTop: 18, columnWidth: 240, columnGap: 34, fontSize: 16, lineHeight: 1.62, color: t.fg }}>
-                {r.points.map((pt, j) => (
-                  <p key={j} style={{ margin: '0 0 12px', breakInside: 'avoid' }}>
-                    {pt}
-                  </p>
-                ))}
+              <div style={{ fontFamily: "'Newsreader', serif", marginTop: 18, fontSize: 16, lineHeight: 1.62, color: t.fg }}>
+                <p style={{ margin: 0 }}>{r.summary}</p>
               </div>
             </div>
           </div>

@@ -4,8 +4,57 @@ interface PaintCanvasProps {
   color: string;
 }
 
-// Full-viewport canvas that trails paint behind the cursor, fading it out
-// like a comet tail, and clears instantly on click.
+type Shape = 'square' | 'circle' | 'star';
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  rot: number;
+  rotSpeed: number;
+  shape: Shape;
+  born: number;
+  life: number;
+}
+
+// A cohesive, playful palette shared with the "trades" word cycle on the
+// landing page — the current theme accent is mixed in too, via colorRef.
+const FUN_COLORS = ['#4da3ff', '#b16cff', '#ffb020', '#ff5c7a', '#2ec4b6', '#6bcb3f', '#ff8a3d'];
+
+const GRAVITY = 320; // px/s²
+const DRAG = 1.4; // fraction of velocity shed per second
+
+function drawShape(ctx: CanvasRenderingContext2D, shape: Shape, size: number) {
+  if (shape === 'circle') {
+    ctx.beginPath();
+    ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  if (shape === 'star') {
+    const s = size;
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.lineTo(s * 0.28, -s * 0.28);
+    ctx.lineTo(s, 0);
+    ctx.lineTo(s * 0.28, s * 0.28);
+    ctx.lineTo(0, s);
+    ctx.lineTo(-s * 0.28, s * 0.28);
+    ctx.lineTo(-s, 0);
+    ctx.lineTo(-s * 0.28, -s * 0.28);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+  // confetti-flake rectangle
+  ctx.fillRect(-size / 2, -size * 0.3, size, size * 0.6);
+}
+
+// Full-viewport canvas that throws a little burst of tumbling, gravity-fed
+// confetti behind the cursor as it moves, and clears instantly on click.
 export function PaintCanvas({ color }: PaintCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const colorRef = useRef(color);
@@ -18,40 +67,8 @@ export function PaintCanvas({ color }: PaintCanvasProps) {
 
     let rafId = 0;
     let lastFrame = performance.now();
-    let lastDrawTime = -Infinity;
-    let settled = true;
-
-    // frame-rate-independent exponential fade: erase a fraction of the
-    // existing alpha each frame based on elapsed time, not frame count.
-    // Canvas alpha is 8-bit, so once a pixel's alpha gets low enough that a
-    // frame's proportional erase amount rounds to zero, the multiplicative
-    // fade mathematically stalls forever at that faint, non-zero value —
-    // a hard clear once the cursor's been idle a beat sweeps up that residue.
-    function fadeTick(now: number) {
-      const dt = now - lastFrame;
-      lastFrame = now;
-      if (!settled) {
-        if (now - lastDrawTime > 500) {
-          ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-          settled = true;
-        } else {
-          const decay = 1 - Math.exp(-dt / 130);
-          ctx!.save();
-          ctx!.globalCompositeOperation = 'destination-out';
-          ctx!.fillStyle = `rgba(0,0,0,${decay})`;
-          ctx!.fillRect(0, 0, window.innerWidth, window.innerHeight);
-          ctx!.restore();
-        }
-      }
-      rafId = requestAnimationFrame(fadeTick);
-    }
-
-    let raw: { x: number; y: number; t: number } | null = null;
-    let smooth: { x: number; y: number } | null = null;
-    let smoothWidth = 6;
-    // last two smoothed points, used to draw a quadratic curve through their
-    // midpoints so the ink never breaks into separately-capped segments
-    let pts: { x: number; y: number }[] = [];
+    let particles: Particle[] = [];
+    const MAX_PARTICLES = 400;
 
     function resize() {
       const dpr = window.devicePixelRatio || 1;
@@ -60,75 +77,107 @@ export function PaintCanvas({ color }: PaintCanvasProps) {
       canvas!.style.width = `${window.innerWidth}px`;
       canvas!.style.height = `${window.innerHeight}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-      raw = null;
-      smooth = null;
-      pts = [];
-      settled = true;
     }
+
+    function spawnParticle(px: number, py: number, vx: number, vy: number, now: number) {
+      const angle = Math.random() * Math.PI * 2;
+      const burst = 30 + Math.random() * 70;
+      const roll = Math.random();
+      const shape: Shape = roll < 0.15 ? 'star' : roll < 0.6 ? 'square' : 'circle';
+      const palette = [colorRef.current, ...FUN_COLORS];
+      particles.push({
+        x: px + (Math.random() - 0.5) * 4,
+        y: py + (Math.random() - 0.5) * 4,
+        vx: vx * 0.12 + Math.cos(angle) * burst,
+        vy: vy * 0.12 + Math.sin(angle) * burst - 50,
+        size: 3 + Math.random() * 4.5,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 7,
+        shape,
+        born: now,
+        life: 500 + Math.random() * 420,
+      });
+      if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+    }
+
+    let last: { x: number; y: number; t: number } | null = null;
 
     function onMove(e: PointerEvent) {
       const x = e.clientX;
       const y = e.clientY;
       const now = performance.now();
-      lastDrawTime = now;
-      settled = false;
 
-      if (!raw || !smooth) {
-        smooth = { x, y };
-        raw = { x, y, t: now };
-        pts = [{ x, y }];
+      if (!last) {
+        last = { x, y, t: now };
+        spawnParticle(x, y, 0, 0, now);
         return;
       }
 
-      const dx = x - raw.x;
-      const dy = y - raw.y;
+      const dx = x - last.x;
+      const dy = y - last.y;
       const dist = Math.hypot(dx, dy);
-      const dt = Math.max(now - raw.t, 1);
-      const speed = dist / dt;
-      const targetWidth = Math.max(2.5, Math.min(9, 9 - speed * 5));
-      // low-pass filter so the nib width eases instead of jumping
-      smoothWidth += (targetWidth - smoothWidth) * 0.12;
+      const dt = Math.max(now - last.t, 1);
+      const vx = (dx / dt) * 1000;
+      const vy = (dy / dt) * 1000;
 
-      // trail the raw cursor position for a smoothed, less jittery stroke
-      smooth = {
-        x: smooth.x + (x - smooth.x) * 0.3,
-        y: smooth.y + (y - smooth.y) * 0.3,
-      };
-
-      pts.push(smooth);
-      if (pts.length > 3) pts.shift();
-
-      if (pts.length === 3) {
-        const [p0, p1, p2] = pts;
-        const midA = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
-        const midB = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-
-        ctx!.strokeStyle = colorRef.current;
-        ctx!.globalAlpha = 1;
-        ctx!.lineWidth = smoothWidth;
-        ctx!.lineCap = 'round';
-        ctx!.lineJoin = 'round';
-        ctx!.beginPath();
-        ctx!.moveTo(midA.x, midA.y);
-        ctx!.quadraticCurveTo(p1.x, p1.y, midB.x, midB.y);
-        ctx!.stroke();
+      const step = 8;
+      const steps = Math.min(24, Math.max(1, Math.floor(dist / step)));
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        if (Math.random() < 0.8) {
+          spawnParticle(last.x + dx * t, last.y + dy * t, vx, vy, now);
+        }
       }
 
-      raw = { x, y, t: now };
+      last = { x, y, t: now };
     }
 
     function onLeave() {
-      raw = null;
-      smooth = null;
-      pts = [];
+      last = null;
     }
 
     function onReset() {
+      particles = [];
       ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-      raw = null;
-      smooth = null;
-      pts = [];
-      settled = true;
+    }
+
+    function tick(now: number) {
+      const dt = Math.min((now - lastFrame) / 1000, 0.05);
+      lastFrame = now;
+
+      ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        const age = now - p.born;
+        if (age >= p.life) {
+          particles.splice(i, 1);
+          continue;
+        }
+        const drag = Math.max(0, 1 - DRAG * dt);
+        p.vy += GRAVITY * dt;
+        p.vx *= drag;
+        p.vy *= drag;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rot += p.rotSpeed * dt;
+
+        const lifeFrac = age / p.life;
+        const alpha = Math.max(0, 1 - lifeFrac * lifeFrac);
+        const pop = age < 80 ? age / 80 : 1;
+
+        ctx!.save();
+        ctx!.translate(p.x, p.y);
+        ctx!.rotate(p.rot);
+        ctx!.scale(pop, pop);
+        ctx!.globalAlpha = alpha;
+        ctx!.fillStyle = p.color;
+        drawShape(ctx!, p.shape, p.size);
+        ctx!.restore();
+      }
+
+      rafId = requestAnimationFrame(tick);
     }
 
     resize();
@@ -137,7 +186,7 @@ export function PaintCanvas({ color }: PaintCanvasProps) {
     window.addEventListener('pointerleave', onLeave);
     window.addEventListener('pointerdown', onReset);
     lastFrame = performance.now();
-    rafId = requestAnimationFrame(fadeTick);
+    rafId = requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener('resize', resize);

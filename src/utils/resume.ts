@@ -14,7 +14,7 @@ export function downloadResume() {
     out += label + '\n';
     c[key].roles.forEach((r) => {
       out += '\n' + r.role + ' | ' + r.org + ' | ' + r.place + ' | ' + r.dates + '\n';
-      r.points.forEach((p) => { out += '  - ' + p + '\n'; });
+      out += '  - ' + r.summary + '\n';
     });
     out += '\n';
   });
@@ -22,7 +22,7 @@ export function downloadResume() {
   out += 'PROJECTS\n';
   c.tech.projects.forEach((p) => {
     out += '\n' + p.name + ' (' + p.meta + ')\n';
-    p.points.forEach((x) => { out += '  - ' + x + '\n'; });
+    out += '  - ' + p.summary + '\n';
   });
 
   out += '\nSKILLS\nTechnical: ' + c.tech.skillsTech.join(', ') + '\nDomain: ' + c.tech.skillsDomain.join(', ') + '\n';
