@@ -27,6 +27,7 @@ function App() {
   const [overlayActive, setOverlayActive] = useState(false);
   const [overlay, setOverlay] = useState({ color: '#000', fg: '#fff', label: '', num: '', font: "'Bricolage Grotesque'" });
   const timeoutRef = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let m: string | null = null;
@@ -44,13 +45,47 @@ function App() {
     };
   }, []);
 
+  // Tag the entry the app loaded on as "landing" so that pressing back from
+  // a category view (which pushes its own entry below) always lands here
+  // instead of exiting the SPA to whatever page opened it.
+  useEffect(() => {
+    try {
+      history.replaceState({ view: 'landing' }, '');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const isLanding = view === 'landing';
   const t = themeFor(isLanding ? 'landing' : view, mode, CONFIG.techAccent);
+
+  // html/body have no background of their own, so if a browser ever shows a
+  // sliver beyond the app's own div (toolbar-driven viewport resize,
+  // rubber-band scroll, etc.) it reveals the theme color instead of a
+  // jarring default gray/white.
+  useEffect(() => {
+    document.documentElement.style.background = t.bg;
+    document.body.style.background = t.bg;
+  }, [t.bg]);
+
+  // CSS `dvh` should equal window.innerHeight, but some browsers compute it
+  // inconsistently (privacy-hardened Chromium forks in particular perturb
+  // viewport-derived metrics for fingerprinting resistance), leaving a gap
+  // between the app's height and the real viewport. Measuring innerHeight
+  // directly and exposing it as a custom property sidesteps that.
+  useEffect(() => {
+    function setAppHeight() {
+      document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
+    }
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    return () => window.removeEventListener('resize', setAppHeight);
+  }, []);
 
   const activeCats = CONFIG.showReadingList ? ALL_CATS : ALL_CATS.filter((id) => id !== 'reading');
   const cats = activeCats.map((id) => META[id]);
 
-  function transitionTo(next: ViewId) {
+  function transitionTo(next: ViewId, pushHistory = true) {
     if (next === view) return;
     const tt = themeFor(next === 'landing' ? 'landing' : next, mode, CONFIG.techAccent);
     const meta = next === 'landing' ? null : META[next as Exclude<ViewId, 'landing'>];
@@ -62,16 +97,33 @@ function App() {
       font: tt.head,
     });
     setOverlayActive(true);
-    timeoutRef.current = window.setTimeout(() => {
-      setView(next);
-      setOverlayActive(false);
+    if (pushHistory) {
       try {
-        window.scrollTo(0, 0);
+        history.pushState({ view: next }, '');
       } catch {
         /* ignore */
       }
+    }
+    timeoutRef.current = window.setTimeout(() => {
+      setView(next);
+      setOverlayActive(false);
+      scrollRef.current?.scrollTo(0, 0);
     }, 430);
   }
+
+  // Pressing the browser's back button from a category view should return
+  // to the home page within the app, not exit the SPA entirely — so every
+  // in-app navigation above gets its own history entry, and here we just
+  // sync the view to whatever entry the browser landed on (never pushing a
+  // new entry ourselves, since that navigation already happened natively).
+  useEffect(() => {
+    function onPopState(e: PopStateEvent) {
+      const target = (e.state?.view as ViewId | undefined) ?? 'landing';
+      transitionTo(target, false);
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [view, mode]);
 
   function toggleMode() {
     const next: Mode = mode === 'dark' ? 'light' : 'dark';
@@ -87,13 +139,16 @@ function App() {
 
   return (
     <div
+      ref={scrollRef}
       style={{
-        minHeight: '100vh',
+        height: 'var(--app-vh, 100dvh)',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        overscrollBehaviorY: 'none',
         background: t.bg,
         color: t.fg,
         fontFamily: `${t.body}, system-ui, sans-serif`,
         transition: 'background .55s ease, color .55s ease',
-        overflowX: 'hidden',
         position: 'relative',
       }}
     >

@@ -1,5 +1,105 @@
+import { useEffect, useRef, useState } from 'react';
 import type { CategoryMeta, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
+import { PaintCanvas } from '../components/PaintCanvas';
+
+const TRADE_WORDS = [
+  { word: 'software', color: '#4da3ff' },
+  { word: 'ai', color: '#b16cff' },
+  { word: 'consulting', color: '#ffb020' },
+  { word: 'strategy', color: '#ff5c7a' },
+  { word: 'comedy', color: '#2ec4b6' },
+  { word: 'leadership', color: '#6bcb3f' },
+  { word: 'operations', color: '#ff8a3d' },
+];
+
+function TradesWord() {
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const hoveredRef = useRef(false);
+  // hover region frozen at the moment the cursor first lands on "trades" —
+  // later words (e.g. the much shorter "ai") swapping in changes the span's
+  // own size, so hit-testing against its live, ever-changing rect would
+  // both enter and exit hover repeatedly as the box resizes under a
+  // stationary cursor. Testing raw cursor position against a fixed
+  // rectangle sidesteps that entirely.
+  const rectRef = useRef<DOMRect | null>(null);
+
+  useEffect(() => {
+    const pad = 5;
+    function inside(r: DOMRect, x: number, y: number) {
+      return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+    }
+    function onMove(e: MouseEvent) {
+      if (!hoveredRef.current) {
+        const el = spanRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (inside(r, e.clientX, e.clientY)) {
+          rectRef.current = r;
+          hoveredRef.current = true;
+          setHovered(true);
+        }
+      } else if (!rectRef.current || !inside(rectRef.current, e.clientX, e.clientY)) {
+        hoveredRef.current = false;
+        rectRef.current = null;
+        setHovered(false);
+      }
+    }
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
+  // -1 is the sentinel for "trades" — keeping it in the same index space as
+  // the cycling words means the very first swap goes through the identical
+  // fade-out/fade-in sequence as every later one, instead of popping in
+  // instantly because the render showing hovered=true beats the effect that
+  // would otherwise kick off the fade.
+  const [idx, setIdx] = useState(-1);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    if (!hovered) {
+      setIdx(-1);
+      setFading(false);
+      return;
+    }
+    let next = 0;
+    let fadeTimeout: number;
+    function reveal() {
+      setFading(true);
+      fadeTimeout = window.setTimeout(() => {
+        setIdx(next);
+        setFading(false);
+      }, 220);
+    }
+    reveal();
+    const id = window.setInterval(() => {
+      next = (next + 1) % TRADE_WORDS.length;
+      reveal();
+    }, 780);
+    return () => {
+      window.clearTimeout(fadeTimeout);
+      window.clearInterval(id);
+    };
+  }, [hovered]);
+
+  const current = idx >= 0 ? TRADE_WORDS[idx] : null;
+
+  return (
+    <span
+      ref={spanRef}
+      style={{
+        display: 'inline-block',
+        color: current?.color,
+        opacity: fading ? 0 : 1,
+        transition: 'opacity .22s ease, color .35s ease',
+      }}
+    >
+      {current ? current.word : 'trades'}
+    </span>
+  );
+}
 
 interface LandingViewProps {
   t: Theme;
@@ -38,10 +138,26 @@ function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) =
     >
       <div>
         <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.16em', opacity: 0.65 }}>{p.num}</div>
-        <div style={{ fontSize: 'clamp(26px,2.7vw,42px)', fontWeight: 700, marginTop: 10, lineHeight: 1.02, letterSpacing: '-.01em' }}>{p.name}</div>
+        <div
+          style={{
+            // Instrument Serif (Leadership) only ships a single 400 weight —
+            // the browser's fake-bold for 700 barely thickens its delicate
+            // strokes, so at matching font-size it reads visibly smaller and
+            // lighter than the other panels' genuine bold cuts. Compensate
+            // with a bit more size and a hairline stroke to restore parity.
+            fontSize: p.id === 'leadership' ? 'clamp(30px,3.1vw,48px)' : 'clamp(26px,2.7vw,42px)',
+            fontWeight: 700,
+            marginTop: 10,
+            lineHeight: 1.02,
+            letterSpacing: '-.01em',
+            WebkitTextStroke: p.id === 'leadership' ? '0.5px currentColor' : undefined,
+          }}
+        >
+          {p.name}
+        </div>
       </div>
       <div>
-        <div style={{ fontSize: 15, opacity: 0.82, lineHeight: 1.45, marginBottom: 20, maxWidth: '34ch' }}>{p.tagline}</div>
+        <div style={{ fontSize: p.id === 'leadership' ? 17 : 15, opacity: 0.82, lineHeight: 1.45, marginBottom: 20, maxWidth: '34ch' }}>{p.tagline}</div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 14, fontWeight: 600, padding: '9px 16px', border: '1px solid currentColor', borderRadius: 999, opacity: 0.9 }}>
           Enter <span>→</span>
         </div>
@@ -52,8 +168,9 @@ function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) =
 
 export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon }: LandingViewProps) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '26px 34px', zIndex: 5 }}>
+    <div style={{ minHeight: 'var(--app-vh, 100dvh)', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+      <PaintCanvas color={t.accent2} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '26px 34px', position: 'relative', zIndex: 5 }}>
         <div style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 20, letterSpacing: '-.01em' }}>Aswath Suresh</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={onOpenModal} style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, padding: '9px 16px', borderRadius: 999, fontSize: 14, cursor: 'pointer' }}>
@@ -68,20 +185,16 @@ export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, o
         </div>
       </div>
 
-      <div style={{ padding: '46px 34px 26px', maxWidth: 1200 }}>
+      <div style={{ padding: '30px 34px 18px', maxWidth: 1200, position: 'relative', zIndex: 1 }}>
         <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 14, letterSpacing: '.18em', textTransform: 'uppercase', color: t.accent2 }}>
-          Recent MS Data Science grad · Johns Hopkins
+          Curious guy trying to have fun.
         </div>
-        <h1 style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 'clamp(38px,6.4vw,92px)', lineHeight: 0.98, letterSpacing: '-.02em', margin: '20px 0 0', maxWidth: '15ch' }}>
-          Jack of many trades, master of one degree.
+        <h1 style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 'clamp(28px,4.2vw,52px)', lineHeight: 1.05, letterSpacing: '-.02em', margin: '14px 0 0' }}>
+          Jack of many <span style={{ whiteSpace: 'nowrap' }}><TradesWord />,</span> master of one degree.
         </h1>
-        <p style={{ fontSize: 'clamp(16px,1.7vw,20px)', color: t.muted, maxWidth: '60ch', margin: '22px 0 0', lineHeight: 1.5 }}>
-          Pick a world. The whole site becomes it.{' '}
-          <span style={{ opacity: 0.7 }}>Tech, consulting, leadership, and the other stuff I love — each with its own look, layout, and story.</span>
-        </p>
       </div>
 
-      <div style={{ flex: '1 1 auto', display: 'flex', gap: 14, padding: '22px 20px 26px', minHeight: '60vh' }}>
+      <div style={{ flex: '1 1 auto', display: 'flex', gap: 14, padding: '18px 20px 26px', position: 'relative', zIndex: 1 }}>
         {cats.map((p) => (
           <LandingPanel key={p.id} p={p} onEnter={onEnter} />
         ))}

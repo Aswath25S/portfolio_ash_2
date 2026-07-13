@@ -73,7 +73,7 @@ export interface CategoryMeta {
 
 export const META: Record<Exclude<ViewId, 'landing'>, CategoryMeta> = {
   tech: { id: 'tech', name: 'Tech', num: '01', tagline: 'AI products, trading models, and full-stack systems.', panelBg: '#06090b', panelFg: '#39ff14', panelBorder: '#16241f', font: "'JetBrains Mono'" },
-  consulting: { id: 'consulting', name: 'Consulting', num: '02', tagline: 'Market sizing and GTM strategy for startups & climate tech.', panelBg: '#0f2440', panelFg: '#ffffff', panelBorder: '#24406a', font: "'Spectral'" },
-  leadership: { id: 'leadership', name: 'Leadership', num: '03', tagline: "Running Hopkins’ largest orgs, events, and case competitions.", panelBg: '#e8dcc8', panelFg: '#2a2620', panelBorder: '#d3c4a8', font: "'Instrument Serif'" },
-  reading: { id: 'reading', name: 'Other Stuff', num: '04', tagline: 'The books, films, and detours between projects.', panelBg: '#17151d', panelFg: '#ff8fb0', panelBorder: '#2b2836', font: "'Bricolage Grotesque'" },
+  consulting: { id: 'consulting', name: 'Consulting', num: '02', tagline: 'Market sizing, GTM strategy and profitability for startups.', panelBg: '#0f2440', panelFg: '#ffffff', panelBorder: '#24406a', font: "'Spectral'" },
+  leadership: { id: 'leadership', name: 'Leadership', num: '03', tagline: 'Leading organizations, events and competitions.', panelBg: '#e8dcc8', panelFg: '#2a2620', panelBorder: '#d3c4a8', font: "'Instrument Serif'" },
+  reading: { id: 'reading', name: 'Other Stuff', num: '04', tagline: 'Things not in the previous sections.', panelBg: '#17151d', panelFg: '#ff8fb0', panelBorder: '#2b2836', font: "'Bricolage Grotesque'" },
 };

@@ -6,10 +6,26 @@ html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  /* html/body are never the scrolling element (the app's own root div is —
+     see App.tsx) — Safari's rubber-band bounce on the *document* scroller
+     is notoriously unreliable to suppress or recolor, even with
+     overscroll-behavior and a live JS-synced background, so scrolling is
+     kept off html/body entirely rather than fought. */
+  overflow: hidden;
+  overscroll-behavior-y: none;
+  /* Static fallback matching the default (dark) theme — without this, html
+     has no background of its own until React mounts and its JS effect runs,
+     so browsers that auto-adapt unstyled canvases to the OS color scheme
+     (e.g. macOS Dark Mode) paint a plain system gray for that gap instead
+     of the app's actual background. App.tsx keeps this in sync afterward
+     for light mode / per-view colors. */
+  background: #0c0c0f;
+  color-scheme: dark light;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
 }
 
 ::selection {
