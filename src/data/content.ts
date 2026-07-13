@@ -59,10 +59,10 @@ export const content = {
   tech: {
     kicker: '01 — Engineering & Data Science',
     title: 'I build AI products end to end.',
-    intro: 'From generating datasets to shipping production features to deep-learning research to developing trading strategies, I build products that leverage data and AI to solve real problems.',
+    intro: 'From generating datasets to shipping features to machine learning research to developing and testing trading strategies.',
     roles: [
       { dates: 'Jan 2026 – Present', place: 'Baltimore, MD', role: 'Founding Engineer', org: 'EligioAI', orgDesc: 'AI platform for patient triage & clinician scheduling',
-        summary: 'Built a healthcare platform from the ground up that reads incoming patient referral documents, pulls out the key medical details automatically, and routes patients to the right care team.' },
+        summary: 'Built a healthcare platform from the ground up that makes patient triage more efficient. Built the RAG workflow to read, analyze and suggest the best clinician for the incoming patient.' },
       { dates: 'Jan 2026 – May 2026', place: 'Baltimore, MD', role: 'Data Scientist', org: 'Campbell', orgDesc: 'Quant firm — systematic futures & equities',
         summary: 'Developed and tested trading strategies using LLMs on years of oil-market news and pricing data, and built the data pipeline that fed them.' },
       { dates: 'Dec 2024 – Jan 2025', place: 'Baltimore, MD', role: 'Data Science Intern', org: 'Costac', orgDesc: 'Financial analytics platform for SMEs',
@@ -74,7 +74,7 @@ export const content = {
       { dates: 'Jun 2021 – Jul 2021', place: 'Charlotte, NC', role: 'Software Intern', org: 'Jobsage.ai', orgDesc: 'Job Recommendation Platform',
         summary: 'Automated job postings from recruiter emails and wrote scripts to keep promotional offers accurate and up to date.' },
       { dates: 'Apr 2020 – Jun 2020', place: 'Mumbai, India', role: 'Machine Learning Intern', org: 'Sustlabs', orgDesc: 'Energy Analytics Platform',
-        summary: 'Built and deployed models that predicted household energy use in real time across thousands of homes.' },
+        summary: 'Built, generated the data to train and deployed models that predicted household energy use in real time across thousands of homes.' },
       { dates: 'Dec 2019 – Jan 2020', place: 'Mumbai, India', role: 'Data Science Intern', org: 'Floww', orgDesc: 'SaaS ops platform for startups & MSMEs',
         summary: 'Wrote scripts to scrape vehicle data and built models to predict fuel efficiency for a startup analytics tool.' },
       { dates: 'Oct 2018 – Dec 2019', place: 'Mumbai, India', role: 'Member, Software Subsystem', org: 'Rakshak — IITB UAV Team', orgDesc: 'Drones for disaster response',
@@ -106,8 +106,8 @@ export const content = {
 
   consulting: {
     kicker: '02 — Strategy & Consulting',
-    title: 'I turn ambiguity into a defensible market case.',
-    intro: 'Case engagements sizing markets, building revenue models, and shaping go-to-market strategy for startups and climate tech.',
+    title: 'Converting ambiguious problems into executive recommendations.',
+    intro: 'Case engagements sizing markets, building revenue models, and shaping go-to-market strategy for startups.',
     roles: [
       { dates: 'Jan – May 2026', place: 'Johns Hopkins', role: 'Consultant', org: 'JHU Graduate Consulting Club — Voiceitt 2.0', orgDesc: 'Case prep, business training & firm networking',
         summary: 'Led a student team researching the U.S. market for an assistive-speech technology company, sizing the opportunity and identifying which patient groups it should focus on first.' },
