@@ -53,18 +53,21 @@ export function TechView({ t }: TechViewProps) {
             <div style={{ fontSize: 13.5, color: t.muted }}>
               <span style={{ color: t.accent }}>aswath@jhu</span>:<span style={{ color: t.accent2 }}>~</span>$ whoami
             </div>
-            <div style={{ margin: '8px 0 24px' }}>
+            <div style={{ margin: '8px 0 0' }}>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(30px,5vw,58px)', fontWeight: 700, color: t.fg, lineHeight: 1.02, letterSpacing: '-.01em' }}>
                 Aswath Suresh
               </div>
               <div style={{ color: t.accent, fontSize: 15, marginTop: 8 }}>// Past & Current Roles: Founding Engineer, Software Engineer, Machine Learning Engineer, Data Scientist</div>
             </div>
-            <div style={{ fontSize: 13.5, color: t.muted }}>
-              <span style={{ color: t.accent }}>aswath@jhu</span>:~$ cat about.txt
-            </div>
-            <div style={{ maxWidth: '72ch', fontSize: 15, lineHeight: 1.65, color: t.fg, marginTop: 8 }}>
-              {cur.intro}
-              <span style={{ display: 'inline-block', width: 9, height: 16, background: t.accent, marginLeft: 5, verticalAlign: '-2px', animation: 'blink 1s steps(1) infinite' }} />
+            <div style={{ position: 'relative', margin: '16px 0 0', paddingLeft: 17, borderLeft: `2px solid ${t.border}` }}>
+              <span style={{ position: 'absolute', left: -5, top: 3, width: 9, height: 9, borderRadius: '50%', background: t.accent, boxShadow: `0 0 8px ${t.accent}` }} />
+              <div style={{ fontSize: 13.5, color: t.muted }}>
+                <span style={{ color: t.accent }}>aswath@jhu</span>:~$ cat about.txt
+              </div>
+              <div style={{ maxWidth: '72ch', fontSize: 15, lineHeight: 1.65, color: t.fg, marginTop: 6 }}>
+                {cur.intro}
+                <span style={{ display: 'inline-block', width: 9, height: 16, background: t.accent, marginLeft: 5, verticalAlign: '-2px', animation: 'blink 1s steps(1) infinite' }} />
+              </div>
             </div>
           </div>
         </div>

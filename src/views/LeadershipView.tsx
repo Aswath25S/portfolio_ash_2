@@ -20,7 +20,12 @@ export function LeadershipView({ t }: LeadershipViewProps) {
         <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 'clamp(42px,8vw,102px)', lineHeight: 0.98, color: t.fg, margin: '22px 0 0', letterSpacing: '-.01em', maxWidth: '16ch' }}>
           {cur.title}
         </h1>
-        <p style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontSize: 'clamp(19px,2.2vw,25px)', lineHeight: 1.5, color: t.muted, marginTop: 24, maxWidth: '58ch' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 18px' }}>
+          <span style={{ width: 40, height: 1, background: t.accent }} />
+          <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, letterSpacing: '.24em', textTransform: 'uppercase', color: t.accent }}>The Brief</span>
+          <span style={{ flex: 1, maxWidth: 40, height: 1, background: t.border }} />
+        </div>
+        <p style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontSize: 'clamp(19px,2.2vw,25px)', lineHeight: 1.5, color: t.muted, maxWidth: '58ch' }}>
           {cur.intro}
         </p>
       </div>

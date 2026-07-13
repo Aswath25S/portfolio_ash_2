@@ -19,7 +19,11 @@ export function ConsultingView({ t }: ConsultingViewProps) {
         <h1 style={{ fontFamily: "'Spectral', serif", fontWeight: 600, fontSize: 'clamp(34px,5.2vw,66px)', lineHeight: 1.05, color: t.fg, margin: '28px 0 0', maxWidth: '18ch', letterSpacing: '-.01em' }}>
           {cur.title}
         </h1>
-        <p style={{ maxWidth: '62ch', fontSize: 17.5, lineHeight: 1.6, color: t.muted, marginTop: 20 }}>{cur.intro}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '22px 0 16px' }}>
+          <span style={{ width: 34, height: 2, background: t.accent2 }} />
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase', color: t.accent2 }}>In Brief</span>
+        </div>
+        <p style={{ maxWidth: '62ch', fontSize: 17.5, lineHeight: 1.6, color: t.muted }}>{cur.intro}</p>
       </div>
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '44px 28px 10px' }}>

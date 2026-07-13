@@ -125,6 +125,73 @@ interface LandingViewProps {
   modeIcon: string;
 }
 
+// Each panel's heading sits far from its tagline in this tall layout — rather
+// than shrinking that gap (which would fight the panel's grow-on-hover
+// motion), fill it with a motif that previews the destination page's own
+// visual language: scanlines for Tech's terminal, ruled lines for
+// Consulting's report, a pull-quote mark for Leadership's magazine, confetti
+// for the reading list's collage.
+function PanelMotif({ id, fg }: { id: CategoryMeta['id']; fg: string }) {
+  if (id === 'tech') {
+    return (
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `repeating-linear-gradient(0deg, ${fg}14 0px, ${fg}14 1px, transparent 1px, transparent 4px)`,
+        }}
+      />
+    );
+  }
+  if (id === 'consulting') {
+    return (
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `repeating-linear-gradient(180deg, ${fg}14 0px, ${fg}14 1px, transparent 1px, transparent 38px)`,
+        }}
+      />
+    );
+  }
+  if (id === 'leadership') {
+    return (
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          right: -18,
+          bottom: -110,
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: 320,
+          lineHeight: 1,
+          color: fg,
+          opacity: 0.08,
+        }}
+      >
+        &rdquo;
+      </div>
+    );
+  }
+  const marks = [
+    { sym: '✳', top: '20%', left: '74%', size: 28, rot: '-10deg', color: '#ff3b6b' },
+    { sym: '✦', top: '46%', left: '16%', size: 20, rot: '8deg', color: '#2d5bff' },
+    { sym: '●', top: '64%', left: '78%', size: 13, rot: '0deg', color: '#ffcf2e' },
+    { sym: '✳', top: '80%', left: '32%', size: 17, rot: '16deg', color: '#19c37d' },
+  ];
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
+      {marks.map((m, i) => (
+        <span key={i} style={{ position: 'absolute', top: m.top, left: m.left, fontSize: m.size, color: m.color, opacity: 0.4, transform: `rotate(${m.rot})` }}>
+          {m.sym}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) => void }) {
   const [hovered, handlers] = useHover();
   return (
@@ -150,7 +217,8 @@ function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) =
         boxShadow: hovered ? '0 26px 70px rgba(0,0,0,.4)' : 'none',
       }}
     >
-      <div>
+      <PanelMotif id={p.id} fg={p.panelFg} />
+      <div style={{ position: 'relative' }}>
         <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.16em', opacity: 0.65 }}>{p.num}</div>
         <div
           style={{
@@ -170,7 +238,7 @@ function LandingPanel({ p, onEnter }: { p: CategoryMeta; onEnter: (id: ViewId) =
           {p.name}
         </div>
       </div>
-      <div>
+      <div style={{ position: 'relative' }}>
         <div style={{ fontSize: p.id === 'leadership' ? 17 : 15, opacity: 0.82, lineHeight: 1.45, marginBottom: 20, maxWidth: '34ch' }}>{p.tagline}</div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 14, fontWeight: 600, padding: '9px 16px', border: '1px solid currentColor', borderRadius: 999, opacity: 0.9 }}>
           Enter <span>→</span>

@@ -62,7 +62,25 @@ export function OtherView({ t }: OtherViewProps) {
         <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 'clamp(46px,9.5vw,124px)', lineHeight: 0.88, color: t.fg, margin: '20px 0 0', letterSpacing: '-.03em' }}>
           Other <span style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontStyle: 'italic', color: t.accent }}>stuff</span> I love.
         </h1>
-        <p style={{ fontFamily: "'Spectral', serif", fontSize: 'clamp(17px,2vw,22px)', lineHeight: 1.5, color: t.muted, marginTop: 20, maxWidth: '52ch' }}>{cur.intro}</p>
+        <div
+          style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: 12,
+            color: t.accent2,
+            background: t.surface,
+            border: `1px dashed ${t.accent2}`,
+            transform: 'rotate(-1.5deg)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
+            padding: '5px 11px',
+            borderRadius: 4,
+            margin: '16px 0 14px',
+          }}
+        >
+          <span>✳</span> the gist
+        </div>
+        <p style={{ fontFamily: "'Spectral', serif", fontSize: 'clamp(17px,2vw,22px)', lineHeight: 1.5, color: t.muted, maxWidth: '52ch' }}>{cur.intro}</p>
         <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 12.5, color: t.muted, border: `1px dashed ${t.border}`, padding: '11px 15px', borderRadius: 10, marginTop: 26, transform: 'rotate(.4deg)', display: 'inline-block' }}>
           // sample list — swap these for your own picks anytime
         </div>
