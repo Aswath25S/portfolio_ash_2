@@ -57,7 +57,7 @@ export function TechView({ t }: TechViewProps) {
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(30px,5vw,58px)', fontWeight: 700, color: t.fg, lineHeight: 1.02, letterSpacing: '-.01em' }}>
                 Aswath Suresh
               </div>
-              <div style={{ color: t.accent, fontSize: 15, marginTop: 8 }}>// Founding Engineer</div>
+              <div style={{ color: t.accent, fontSize: 15, marginTop: 8 }}>// Past & Current Roles: Founding Engineer, Software Engineer, Machine Learning Engineer, Data Scientist</div>
             </div>
             <div style={{ fontSize: 13.5, color: t.muted }}>
               <span style={{ color: t.accent }}>aswath@jhu</span>:~$ cat about.txt

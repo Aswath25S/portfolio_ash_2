@@ -17,10 +17,10 @@ function TradesWord() {
   const spanRef = useRef<HTMLSpanElement>(null);
   const [hovered, setHovered] = useState(false);
   const hoveredRef = useRef(false);
-  // hover region frozen at the moment the cursor first lands on "trades" —
-  // later words (e.g. the much shorter "ai") swapping in changes the span's
-  // own size, so hit-testing against its live, ever-changing rect would
-  // both enter and exit hover repeatedly as the box resizes under a
+  // hover region frozen at the moment the cursor first lands on "many
+  // trades" — later words (e.g. the much shorter "ai") swapping in changes
+  // the span's own size, so hit-testing against its live, ever-changing rect
+  // would both enter and exit hover repeatedly as the box resizes under a
   // stationary cursor. Testing raw cursor position against a fixed
   // rectangle sidesteps that entirely.
   const rectRef = useRef<DOMRect | null>(null);
@@ -50,18 +50,16 @@ function TradesWord() {
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  // -1 is the sentinel for "trades" — keeping it in the same index space as
-  // the cycling words means the very first swap gets the identical crossfade
-  // treatment as every later one, instead of popping in instantly because
-  // the render showing hovered=true beats the effect that kicks off the fade.
+  // -1 is the sentinel for "many trades" — keeping it in the same index
+  // space as the cycling words means the very first swap gets the identical
+  // crossfade treatment as every later one, instead of popping in instantly
+  // because the render showing hovered=true beats the effect that kicks off
+  // the fade.
   const [idx, setIdx] = useState(-1);
   const [outgoing, setOutgoing] = useState<{ idx: number; token: number } | null>(null);
   const idxRef = useRef(-1);
   const tokenRef = useRef(0);
 
-  // True crossfade: the outgoing word animates out while the incoming one
-  // animates in at the same time, instead of fading to nothing and back —
-  // that gap read as an abrupt blink rather than a smooth transition.
   function advance(next: number) {
     const prev = idxRef.current;
     idxRef.current = next;
@@ -87,7 +85,7 @@ function TradesWord() {
     return () => window.clearInterval(id);
   }, [hovered]);
 
-  const wordAt = (i: number) => (i >= 0 ? TRADE_WORDS[i] : { word: 'trades', color: undefined });
+  const wordAt = (i: number) => (i >= 0 ? TRADE_WORDS[i] : { word: 'many trades', color: undefined });
   const current = wordAt(idx);
   const leaving = outgoing ? wordAt(outgoing.idx) : null;
 
@@ -206,7 +204,7 @@ export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, o
           Curious guy trying to have fun.
         </div>
         <h1 style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 'clamp(28px,4.2vw,52px)', lineHeight: 1.05, letterSpacing: '-.02em', margin: '14px 0 0' }}>
-          Jack of many <span style={{ whiteSpace: 'nowrap' }}><TradesWord />,</span> master of one degree.
+          Jack of <span style={{ whiteSpace: 'nowrap' }}><TradesWord />,</span> master of one degree.
         </h1>
       </div>
 
