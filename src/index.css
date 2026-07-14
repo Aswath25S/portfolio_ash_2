@@ -141,6 +141,15 @@ body {
   }
 }
 
+@keyframes wobble {
+  0%, 100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
 button {
   font: inherit;
 }

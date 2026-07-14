@@ -17,6 +17,7 @@ export interface ReadingItem {
   title: string;
   by: string;
   note: string;
+  img?: string;
 }
 
 export interface ReadingSection {
@@ -126,21 +127,27 @@ export const content = {
 
   leadership: {
     kicker: '03 — Leadership & Community',
-    title: 'I build organizations and the events that fill them.',
-    intro: 'From governing 2,500+ graduate students to launching an intercollegiate case competition, I lead teams that ship real experiences.',
+    title: 'Building, running, leading and expanding multiple organizations.',
+    intro: 'Leadership experiences across technical, design, marketing, consulting and more.',
     roles: [
       { dates: 'Aug 2025 – May 2026', place: 'Johns Hopkins', role: 'Executive Board Member', org: 'Graduate Representative Organization', orgDesc: 'Governance body for 2,500+ grad students',
         summary: 'Helped lead the university’s main graduate student government, planning large campus events and representing student interests to the administration.' },
       { dates: 'Aug 2025 – May 2026', place: 'Johns Hopkins', role: 'Co-President', org: 'JHU Consulting Club', orgDesc: 'Career prep & recruiter engagement',
         summary: 'Co-led the graduate consulting club, organizing recruiting events with top firms and launching the school’s first case competition between universities.' },
+      { dates: 'Aug 2025 – May 2026', place: 'Johns Hopkins', role: 'Lead Consultant', org: 'Startup Consulting Engagements', orgDesc: 'Market sizing & GTM strategy for startups',
+        summary: 'Led multiple concurrent consulting engagements for early-stage startups, managing student teams through market research, pricing, and go-to-market strategy work.' },
+      { dates: 'Aug 2025 – Dec 2025', place: 'Johns Hopkins', role: 'Director of Outreach', org: 'Johns Hopkins Product Management Club', orgDesc: 'PM community, workshops & recruiting',
+        summary: 'Led outreach for the Product Management Club, building relationships with other teams and clubs to grow engagement.' },
       { dates: 'Apr 2025 – May 2026', place: 'Johns Hopkins', role: 'Event & Social Chair', org: 'Stand Up Comedy Club', orgDesc: 'We do stand-up. Or at least try to.',
-        summary: 'Grew the comedy club’s community by organizing shows and workshops, and secured a grant to put on a show blending comedy and dance.' },
+        summary: 'Grew the comedy club’s community by organizing shows, workshops and collaboration with other performing arts groups. Secured a grant to showcase South Asian culture in arts.' },
       { dates: 'Jan – Apr 2025', place: 'Johns Hopkins', role: 'Director, Design & Marketing', org: 'Culture Show', orgDesc: 'Hopkins’ flagship cultural showcase',
         summary: 'Led the design and marketing for the university’s biggest cultural showcase, coordinating a team and volunteers to put on a smooth live event.' },
       { dates: 'Oct 2024 – May 2026', place: 'Johns Hopkins', role: 'Student Ambassador', org: 'International Students at Hopkins', orgDesc: 'Community & cultural integration',
         summary: 'Organized events and outings to help incoming international students settle in and build community.' },
-      { dates: 'Jan 2025 – May 2026', place: 'Johns Hopkins', role: 'Member', org: 'Sustainable Hopkins Innovative Projects', orgDesc: 'Campus sustainability initiatives',
-        summary: 'Organized clothing drives and food-donation efforts to support campus sustainability.' },
+      { dates: 'Jan 2025 – May 2026', place: 'Johns Hopkins', role: 'Team Lead', org: 'Sustainable Hopkins Innovative Projects', orgDesc: 'Campus sustainability initiatives',
+        summary: 'Organized clothing drives and food-donation efforts to support campus sustainability. Built the team leading food recovery initiatives.' },
+      { dates: 'Feb 2024 – May 2024', place: 'Chennai, India', role: 'Project Management Intern', org: 'IIT Madras', orgDesc: 'AR/VR visualization research',
+        summary: 'Led and coordinated student researchers across two labs, managing timelines and cross-team collaboration on ongoing visualization projects.' },
       { dates: 'Aug 2019 – Feb 2020', place: 'IIT Bombay', role: 'Media & PR Coordinator', org: 'Abhyuday', orgDesc: 'India’s largest student-run social org',
         summary: 'Coordinated a large network of student volunteers across India and helped secure funding for the organization’s flagship event.' },
     ],
@@ -148,23 +155,48 @@ export const content = {
 
   reading: {
     kicker: '04 — Off the Clock',
-    title: 'What’s on my shelf and my screen.',
-    intro: 'A rotating, slightly chaotic list of the books, films, and ideas I’m chewing on between projects.',
+    title: 'Who and what I keep coming back to.',
+    intro: 'A rotating, slightly chaotic list of the comedians, authors, films, and books I’m currently obsessed with.',
     readingSections: [
-      { name: 'On the shelf', items: [
-        { title: 'Thinking in Systems', by: 'Donella Meadows', note: 'Mental models I keep coming back to.' },
-        { title: 'The Making of a Manager', by: 'Julie Zhuo', note: 'For every new leadership role.' },
-        { title: 'Antifragile', by: 'Nassim Taleb', note: 'How to gain from disorder.' },
+      { name: 'Comedians I love', items: [
+        { title: 'Anthony Jeselnik', by: 'Comedian', note: 'Comedy writer with surgery level precision.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Anthony_Jeselnik_in_2012.jpg/330px-Anthony_Jeselnik_in_2012.jpg' },
+        { title: 'Bill Burr', by: 'Comedian', note: 'Might be the best ranter out there.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Bill_Burr_by_Gage_Skidmore.jpg/330px-Bill_Burr_by_Gage_Skidmore.jpg' },
+        { title: 'Jimmy Carr', by: 'Comedian', note: 'Razor-sharp wit.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Jimmy_Carr_2024_%28cropped%29.png/330px-Jimmy_Carr_2024_%28cropped%29.png' },
+        { title: 'Dave Chappelle', by: 'Comedian', note: 'Still the standard everyone else is graded on.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Dave_Chappelle_at_Preamiere_of_%22Dave_Chappelle_In_Real_Life%22_%282%29_%28cropped_2%29.jpg/330px-Dave_Chappelle_at_Preamiere_of_%22Dave_Chappelle_In_Real_Life%22_%282%29_%28cropped_2%29.jpg' },
       ]},
-      { name: 'On screen', items: [
-        { title: 'Severance', by: 'Series', note: 'Work-life balance, taken literally.' },
-        { title: 'Everything Everywhere All at Once', by: 'Film', note: 'Jack of many universes.' },
-        { title: 'The Bear', by: 'Series', note: 'Chaos, teams, and shipping under pressure.' },
+      { name: 'Favorite authors', items: [
+        { title: 'Malcolm Gladwell', by: 'Author', note: 'Master at beaking down complex ideas.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Malcolm_Gladwell%2C_author%2C_at_SXSW_2025_02_%28cropped%29.jpg/330px-Malcolm_Gladwell%2C_author%2C_at_SXSW_2025_02_%28cropped%29.jpg' },
+        { title: 'Gabriel García Márquez', by: 'Author', note: 'A literary giant.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Gabriel_Garcia_Marquez.jpg/330px-Gabriel_Garcia_Marquez.jpg' },
+        { title: 'Chinua Achebe', by: 'Author', note: 'Lots of things fall apart, but his work stands. (Pun Intended.)',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Chinua_Achebe%2C_1966.jpg/330px-Chinua_Achebe%2C_1966.jpg' },
+        { title: 'Franz Kafka', by: 'Author', note: 'A fan of Kafka is my friend without introduction.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Franz_Kafka%2C_1923.jpg/330px-Franz_Kafka%2C_1923.jpg' },
+        { title: 'நா. முத்துக்குமார்', by: 'Na. Muthukumar — Author', note: 'Well, it\'s Tamil lyrics and poetry. It doesn\'t get any better than that.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Na_Muthukumar_at_Touring_Talkies_Audio_Launch_%28cropped%29.jpg/330px-Na_Muthukumar_at_Touring_Talkies_Audio_Launch_%28cropped%29.jpg' },
       ]},
-      { name: 'In the feed', items: [
-        { title: 'Paul Graham Essays', by: 'Longreads', note: 'Startups and clear thinking.' },
-        { title: 'Stratechery', by: 'Ben Thompson', note: 'Business strategy, weekly.' },
-        { title: 'Distill.pub', by: 'ML writing', note: 'ML explained beautifully.' },
+      { name: 'Next on my watch list', items: [
+        { title: 'Ran', by: 'Akira Kurosawa', note: 'Huge fan of Seven Samurai. Ran is next on the list.',
+          img: 'https://upload.wikimedia.org/wikipedia/en/f/f2/Kuroran.jpg' },
+        { title: 'Fallen Angels', by: 'Wong Kar-wai', note: 'Heard a lot about it, just need the time.',
+          img: 'https://upload.wikimedia.org/wikipedia/en/0/04/Fallen-Angels-Poster.jpg' },
+        { title: 'A Hidden Life', by: 'Terrence Malick', note: 'Would be my first film of Malick.',
+          img: 'https://upload.wikimedia.org/wikipedia/en/2/2d/HiddenLifePoster.jpeg' },
+        { title: 'Dude', by: 'Keerthiswaran', note: 'The announcing of the superstar of Tamil cinema.',
+          img: 'https://upload.wikimedia.org/wikipedia/en/d/de/Dude_%282025%29_Poster.jpeg' },
+      ]},
+      { name: 'Next on my reading list', items: [
+        { title: 'White Nights', by: 'Fyodor Dostoevsky', note: 'Lonley guy has a crush, me too Doestoevsky, me too.',
+          img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Dostoyevski_-_White_Nights_%281865%29.jpg/330px-Dostoyevski_-_White_Nights_%281865%29.jpg' },
+        { title: 'Poor Economics', by: 'Abhijit Banerjee & Esther Duflo', note: 'Wanting to learn economics.',
+          img: 'https://upload.wikimedia.org/wikipedia/en/1/1a/Poor_Economics.jpg' },
+        { title: 'The Remains of the Day', by: 'Kazuo Ishiguro', note: "Read half of it, very unique work.",
+          img: 'https://upload.wikimedia.org/wikipedia/en/c/c7/KazuoIshiguro_TheRemainsOfTheDay.jpg' },
       ]},
     ],
   } satisfies ReadingContent,

@@ -17,7 +17,7 @@ export function LeadershipView({ t }: LeadershipViewProps) {
           <span style={{ flex: 1, height: 1, background: t.border }} />
           <span style={{ color: t.muted }}>Vol. 04 · 2026</span>
         </div>
-        <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 'clamp(42px,8vw,102px)', lineHeight: 0.98, color: t.fg, margin: '22px 0 0', letterSpacing: '-.01em', maxWidth: '16ch' }}>
+        <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 'clamp(32px,6vw,76px)', lineHeight: 0.98, color: t.fg, margin: '22px 0 0', letterSpacing: '-.01em', maxWidth: '18ch' }}>
           {cur.title}
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 18px' }}>
@@ -28,30 +28,6 @@ export function LeadershipView({ t }: LeadershipViewProps) {
         <p style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontSize: 'clamp(19px,2.2vw,25px)', lineHeight: 1.5, color: t.muted, maxWidth: '58ch' }}>
           {cur.intro}
         </p>
-      </div>
-
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '22px 30px' }}>
-        <div
-          style={{
-            height: 'clamp(200px,32vw,320px)',
-            border: `1px solid ${t.border}`,
-            borderRadius: 4,
-            background: `repeating-linear-gradient(45deg, ${t.surface}, ${t.surface} 13px, transparent 13px, transparent 26px)`,
-            display: 'flex',
-            alignItems: 'flex-end',
-            padding: 18,
-          }}
-        >
-          <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: t.muted, background: t.bg, padding: '6px 12px', border: `1px solid ${t.border}` }}>
-            Lead portrait — drop a photo here
-          </span>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 30px' }}>
-        <blockquote style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 'clamp(30px,4.8vw,58px)', lineHeight: 1.1, color: t.accent, margin: 0, maxWidth: '20ch' }}>
-          "Leadership is mostly logistics, a little bravery, and remembering everyone's name."
-        </blockquote>
       </div>
 
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 30px 10px' }}>

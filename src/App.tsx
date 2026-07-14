@@ -162,66 +162,83 @@ function App() {
   const modeIcon = mode === 'dark' ? '☀' : '☾';
 
   return (
-    <div
-      ref={scrollRef}
-      style={{
-        height: 'var(--app-vh, 100dvh)',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        overscrollBehaviorY: 'none',
-        background: t.bg,
-        color: t.fg,
-        fontFamily: `${t.body}, system-ui, sans-serif`,
-        transition: 'background .55s ease, color .55s ease',
-        position: 'relative',
-      }}
-    >
-      {isLanding ? (
-        <LandingView
-          t={t}
-          cats={cats}
-          onEnter={transitionTo}
-          onOpenModal={() => setModalOpen(true)}
-          onDownloadResume={downloadResume}
-          onToggleMode={toggleMode}
-          modeIcon={modeIcon}
-          doodleId={DOODLE_IDS[doodleIdx]}
-          onDoodleClick={advanceDoodle}
-        />
-      ) : (
-        <>
-          <CategoryNav
+    <>
+      {/* Fixed, viewport-sized layer for the theme background — kept off the
+          scrollable content div below because that div's paintable area is
+          much taller than the viewport, and animating background-color on
+          such a tall element causes visible tile-rasterization seams during
+          the transition. A fixed layer is always exactly one viewport tall,
+          so it repaints as a single tile. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: t.bg,
+          transition: 'background .55s ease',
+          zIndex: -1,
+        }}
+      />
+      <div
+        ref={scrollRef}
+        style={{
+          height: 'var(--app-vh, 100dvh)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          overscrollBehaviorY: 'none',
+          color: t.fg,
+          fontFamily: `${t.body}, system-ui, sans-serif`,
+          transition: 'color .55s ease',
+          position: 'relative',
+        }}
+      >
+        {isLanding ? (
+          <LandingView
             t={t}
             cats={cats}
-            activeView={view}
-            onGoHome={() => transitionTo('landing')}
             onEnter={transitionTo}
             onOpenModal={() => setModalOpen(true)}
             onDownloadResume={downloadResume}
             onToggleMode={toggleMode}
             modeIcon={modeIcon}
+            doodleId={DOODLE_IDS[doodleIdx]}
+            onDoodleClick={advanceDoodle}
           />
-          {view === 'tech' && <TechView t={t} />}
-          {view === 'consulting' && <ConsultingView t={t} />}
-          {view === 'leadership' && <LeadershipView t={t} />}
-          {view === 'reading' && <OtherView t={t} />}
-          <CategoryFooter t={t} />
-        </>
-      )}
+        ) : (
+          <>
+            <CategoryNav
+              t={t}
+              cats={cats}
+              activeView={view}
+              onGoHome={() => transitionTo('landing')}
+              onEnter={transitionTo}
+              onOpenModal={() => setModalOpen(true)}
+              onDownloadResume={downloadResume}
+              onToggleMode={toggleMode}
+              modeIcon={modeIcon}
+            />
+            {view === 'tech' && <TechView t={t} />}
+            {view === 'consulting' && <ConsultingView t={t} />}
+            {view === 'leadership' && <LeadershipView t={t} />}
+            {view === 'reading' && <OtherView t={t} />}
+            <CategoryFooter t={t} />
+          </>
+        )}
 
-      {modalOpen && <AboutModal t={t} onClose={() => setModalOpen(false)} onDownloadResume={downloadResume} />}
+        {modalOpen && <AboutModal t={t} onClose={() => setModalOpen(false)} onDownloadResume={downloadResume} />}
 
-      <TransitionOverlay
-        active={overlayActive}
-        color={overlay.color}
-        fg={overlay.fg}
-        label={overlay.label}
-        num={overlay.num}
-        font={overlay.font}
-        isHome={overlay.isHome}
-        doodleId={DOODLE_IDS[doodleIdx]}
-      />
-    </div>
+        <TransitionOverlay
+          active={overlayActive}
+          color={overlay.color}
+          fg={overlay.fg}
+          label={overlay.label}
+          num={overlay.num}
+          font={overlay.font}
+          isHome={overlay.isHome}
+          doodleId={DOODLE_IDS[doodleIdx]}
+        />
+      </div>
+    </>
   );
 }
 
