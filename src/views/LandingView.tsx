@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import type { CategoryMeta, Mode, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { PaintCanvas } from '../components/PaintCanvas';
 import { PillButton } from '../components/PillButton';
 
@@ -380,6 +381,11 @@ const LINE_COLORS: Record<Exclude<ViewId, 'landing'>, string> = {
   reading: '#ff4d79',
 };
 
+// Width of the left-edge gutter the signal line runs through on stacked
+// mobile panels — LandingPanel pads its content past this so text never
+// sits on top of the line.
+const LINE_GUTTER = 26;
+
 // Point-sampled (rather than bezier/H-V path strings) so each line can be
 // perturbed per-point for the cursor "pluck" interaction below. Duplicate-x
 // pairs fake the right-angle jumps for Tech/Consulting's chart look.
@@ -413,8 +419,19 @@ const PANEL_TAGS: Record<Exclude<ViewId, 'landing'>, string> = {
   reading: 'TRACK 07',
 };
 
-function pointsToPath(points: [number, number][], offsets: Float32Array) {
-  return points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${(y + offsets[i]).toFixed(2)}`).join(' ');
+// `vertical` swaps which axis is which in the emitted path: normally the
+// along-length coordinate (x, 0-100) maps to the SVG's x and the thickness
+// coordinate (y, 0-40) to its y. Stacked mobile panels run the line down
+// the left edge instead of through the middle, so there the along-length
+// coordinate has to drive the SVG's y (height) and thickness drives x
+// (width) — same points, same physics, just read out swapped.
+function pointsToPath(points: [number, number][], offsets: Float32Array, vertical: boolean) {
+  return points
+    .map(([x, y], i) => {
+      const thickness = (y + offsets[i]).toFixed(2);
+      return vertical ? `${i === 0 ? 'M' : 'L'}${thickness},${x}` : `${i === 0 ? 'M' : 'L'}${x},${thickness}`;
+    })
+    .join(' ');
 }
 
 function valueAtX(points: [number, number][], x: number) {
@@ -458,7 +475,19 @@ function pulseShapeOffset(dx: number) {
   return -spike + rebound; // negative = visually up (SVG y grows down), positive = the dip right after
 }
 
-function ShakyLine({ points, color, pulseTrigger, pulseDelay }: { points: [number, number][]; color: string; pulseTrigger: number; pulseDelay: number }) {
+function ShakyLine({
+  points,
+  color,
+  pulseTrigger,
+  pulseDelay,
+  vertical = false,
+}: {
+  points: [number, number][];
+  color: string;
+  pulseTrigger: number;
+  pulseDelay: number;
+  vertical?: boolean;
+}) {
   const pathRef = useRef<SVGPathElement>(null);
   const offsets = useRef(new Float32Array(points.length));
   const velocities = useRef(new Float32Array(points.length));
@@ -501,14 +530,14 @@ function ShakyLine({ points, color, pulseTrigger, pulseDelay }: { points: [numbe
     }
     for (let i = 0; i < points.length; i++) combined[i] += offsets.current[i];
 
-    pathRef.current?.setAttribute('d', pointsToPath(points, combined));
+    pathRef.current?.setAttribute('d', pointsToPath(points, combined, vertical));
     if (energy > 0.03 || pulses.current.length > 0) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
       rafRef.current = null;
       offsets.current.fill(0);
       velocities.current.fill(0);
-      pathRef.current?.setAttribute('d', pointsToPath(points, offsets.current));
+      pathRef.current?.setAttribute('d', pointsToPath(points, offsets.current, vertical));
     }
   }
 
@@ -533,8 +562,8 @@ function ShakyLine({ points, color, pulseTrigger, pulseDelay }: { points: [numbe
   function handleMove(e: ReactMouseEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const localX = ((e.clientX - rect.left) / rect.width) * 100;
-    const localY = ((e.clientY - rect.top) / rect.height) * 40;
+    const localX = vertical ? ((e.clientY - rect.top) / rect.height) * 100 : ((e.clientX - rect.left) / rect.width) * 100;
+    const localY = vertical ? ((e.clientX - rect.left) / rect.width) * 40 : ((e.clientY - rect.top) / rect.height) * 40;
     const last = lastPos.current;
     lastPos.current = { x: localX, y: localY };
     if (localX < 0 || localX > 100) return;
@@ -553,14 +582,14 @@ function ShakyLine({ points, color, pulseTrigger, pulseDelay }: { points: [numbe
 
   return (
     <svg
-      viewBox="0 0 100 40"
+      viewBox={vertical ? '0 0 40 100' : '0 0 100 40'}
       preserveAspectRatio="none"
       onMouseMove={handleMove}
       style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}
     >
       <path
         ref={pathRef}
-        d={pointsToPath(points, offsets.current)}
+        d={pointsToPath(points, offsets.current, vertical)}
         fill="none"
         stroke={color}
         strokeWidth={1.8}
@@ -579,12 +608,14 @@ function PanelMotif({
   first,
   pulseTrigger,
   pulseDelay,
+  vertical = false,
 }: {
   id: Exclude<ViewId, 'landing'>;
   fg: string;
   first: boolean;
   pulseTrigger: number;
   pulseDelay: number;
+  vertical?: boolean;
 }) {
   let texture: ReactNode = null;
   if (id === 'tech') {
@@ -648,24 +679,49 @@ function PanelMotif({
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
       {texture}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
-        <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} />
-        {!first && (
-          <span
-            style={{
-              position: 'absolute',
-              left: -3,
-              top: `${(startY / 40) * 100}%`,
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: lineColor,
-              transform: 'translateY(-50%)',
-              boxShadow: `0 0 8px ${lineColor}`,
-            }}
-          />
-        )}
-      </div>
+      {vertical ? (
+        // Stacked mobile panels run the signal line down a narrow gutter
+        // hugging the left edge instead of through the vertical center —
+        // the panels' own left padding is widened (see LINE_GUTTER) to
+        // keep this clear of the title/tagline text above it.
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: LINE_GUTTER }}>
+          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
+          {!first && (
+            <span
+              style={{
+                position: 'absolute',
+                top: -3,
+                left: `${(startY / 40) * 100}%`,
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: lineColor,
+                transform: 'translateX(-50%)',
+                boxShadow: `0 0 8px ${lineColor}`,
+              }}
+            />
+          )}
+        </div>
+      ) : (
+        <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
+          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} />
+          {!first && (
+            <span
+              style={{
+                position: 'absolute',
+                left: -3,
+                top: `${(startY / 40) * 100}%`,
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: lineColor,
+                transform: 'translateY(-50%)',
+                boxShadow: `0 0 8px ${lineColor}`,
+              }}
+            />
+          )}
+        </div>
+      )}
       <div style={{ position: 'absolute', top: 24, right: 22, fontFamily: "'Space Mono', monospace", fontSize: 11, letterSpacing: '.14em', color: lineColor, opacity: 0.65 }}>
         {PANEL_TAGS[id]}
       </div>
@@ -689,19 +745,21 @@ function LandingPanel({
   pulseTrigger: number;
 }) {
   const [hovered, handlers] = useHover();
+  const isMobile = useIsMobile();
   return (
     <div
       {...handlers}
       onClick={() => onEnter(p.id)}
       style={{
         position: 'relative',
-        flex: hovered ? '2.6 1 0' : '1 1 0',
+        flex: isMobile ? '0 0 auto' : hovered ? '2.6 1 0' : '1 1 0',
+        minHeight: isMobile ? 190 : undefined,
         minWidth: 0,
         borderRadius: 16,
         background: p.panelBg,
         color: p.panelFg,
         border: `1px solid ${p.panelBorder}`,
-        padding: '28px 26px',
+        padding: isMobile ? `22px 20px 22px ${LINE_GUTTER + 10}px` : '28px 26px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -718,6 +776,7 @@ function LandingPanel({
         first={first}
         pulseTrigger={pulseTrigger}
         pulseDelay={index * INTER_PANEL_DELAY_MS}
+        vertical={isMobile}
       />
       <div style={{ position: 'relative' }}>
         <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.16em', opacity: 0.65 }}>{p.num}</div>
@@ -771,6 +830,7 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
   // its own reaction by index * INTER_PANEL_DELAY_MS, so a single tick here
   // reads as one pulse travelling left-to-right through all four lines.
   const [pulseTrigger, setPulseTrigger] = useState(0);
+  const isMobile = useIsMobile();
   useEffect(() => {
     const kick = window.setTimeout(() => setPulseTrigger((n) => n + 1), 1200);
     const id = window.setInterval(() => setPulseTrigger((n) => n + 1), HEARTBEAT_INTERVAL_MS);
@@ -783,23 +843,34 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
   return (
     <div style={{ minHeight: 'var(--app-vh, 100dvh)', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
       <PaintCanvas color={t.accent2} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '26px 34px', position: 'relative', zIndex: 5 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          rowGap: 12,
+          padding: isMobile ? '18px 20px' : '26px 34px',
+          position: 'relative',
+          zIndex: 5,
+        }}
+      >
         <NameDoodle id={doodleId} mode={mode} onClick={onDoodleClick} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg}>
+          <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg} padding={isMobile ? '8px 14px' : undefined} fontSize={isMobile ? 13.5 : undefined}>
             About
           </PillButton>
-          <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg}>
+          <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg} padding={isMobile ? '8px 14px' : undefined} fontSize={isMobile ? 13.5 : undefined}>
             Résumé ↓
           </PillButton>
-          <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: 38, height: 38, borderRadius: 999, fontSize: 15, cursor: 'pointer' }}>
+          <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: isMobile ? 36 : 38, height: isMobile ? 36 : 38, borderRadius: 999, fontSize: 15, cursor: 'pointer', flexShrink: 0 }}>
             {modeIcon}
           </button>
         </div>
       </div>
 
-      <div style={{ padding: '30px 34px 18px', maxWidth: 1200, position: 'relative', zIndex: 1 }}>
-        <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 14, letterSpacing: '.18em', textTransform: 'uppercase', color: t.accent2 }}>
+      <div style={{ padding: isMobile ? '20px 20px 14px' : '30px 34px 18px', maxWidth: 1200, position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: isMobile ? 12 : 14, letterSpacing: '.18em', textTransform: 'uppercase', color: t.accent2 }}>
           Curious guy trying to have fun.
         </div>
         <h1 style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 'clamp(28px,4.2vw,52px)', lineHeight: 1.05, letterSpacing: '-.02em', margin: '14px 0 0' }}>
@@ -807,7 +878,17 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
         </h1>
       </div>
 
-      <div style={{ flex: '1 1 auto', display: 'flex', gap: 14, padding: '18px 20px 26px', position: 'relative', zIndex: 1 }}>
+      <div
+        style={{
+          flex: '1 1 auto',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 12 : 14,
+          padding: isMobile ? '14px 16px 26px' : '18px 20px 26px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         {cats.map((p, i) => (
           <LandingPanel key={p.id} p={p} onEnter={onEnter} first={i === 0} index={i} pulseTrigger={pulseTrigger} />
         ))}

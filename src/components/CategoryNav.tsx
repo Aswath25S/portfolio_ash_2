@@ -1,5 +1,6 @@
 import type { CategoryMeta, Theme, ViewId } from '../data/theme';
 import { PillButton } from './PillButton';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface CategoryNavProps {
   t: Theme;
@@ -14,6 +15,7 @@ interface CategoryNavProps {
 }
 
 export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon }: CategoryNavProps) {
+  const isMobile = useIsMobile();
   return (
     <div
       style={{
@@ -21,20 +23,36 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
         top: 0,
         zIndex: 40,
         display: 'flex',
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
         justifyContent: 'space-between',
         alignItems: 'center',
+        rowGap: 10,
         gap: 16,
-        padding: '15px 26px',
+        padding: isMobile ? '12px 16px' : '15px 26px',
         background: t.navBg,
         WebkitBackdropFilter: 'blur(12px)',
         backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${t.border}`,
       }}
     >
-      <div onClick={onGoHome} style={{ cursor: 'pointer', fontFamily: `${t.head}, sans-serif`, fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>
+      <div
+        onClick={onGoHome}
+        style={{ order: 1, cursor: 'pointer', fontFamily: `${t.head}, sans-serif`, fontWeight: 700, fontSize: isMobile ? 14.5 : 16, whiteSpace: 'nowrap' }}
+      >
         ← Aswath Suresh
       </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+      <div
+        style={{
+          order: isMobile ? 3 : 2,
+          display: 'flex',
+          gap: 6,
+          flexWrap: isMobile ? 'nowrap' : 'wrap',
+          justifyContent: isMobile ? 'flex-start' : 'center',
+          flexBasis: isMobile ? '100%' : 'auto',
+          overflowX: isMobile ? 'auto' : 'visible',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         {cats.map((p) => {
           const active = p.id === activeView;
           return (
@@ -50,6 +68,8 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
                 fontSize: 13.5,
                 fontWeight: 600,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 transition: 'all .25s',
               }}
             >
@@ -58,14 +78,16 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
           );
         })}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg} padding="8px 14px" fontSize={13.5}>
-          Résumé ↓
-        </PillButton>
+      <div style={{ order: isMobile ? 2 : 3, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {!isMobile && (
+          <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg} padding="8px 14px" fontSize={13.5}>
+            Résumé ↓
+          </PillButton>
+        )}
         <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg} padding="8px 14px" fontSize={13.5}>
           About
         </PillButton>
-        <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: 36, height: 36, borderRadius: 999, fontSize: 15, cursor: 'pointer' }}>
+        <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: 36, height: 36, borderRadius: 999, fontSize: 15, cursor: 'pointer', flexShrink: 0 }}>
           {modeIcon}
         </button>
       </div>

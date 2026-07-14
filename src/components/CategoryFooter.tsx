@@ -1,13 +1,15 @@
 import type { Theme } from '../data/theme';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface CategoryFooterProps {
   t: Theme;
 }
 
 export function CategoryFooter({ t }: CategoryFooterProps) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ borderTop: `1px solid ${t.border}`, marginTop: 40, padding: '52px 28px 72px' }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 34 }}>
+    <div style={{ borderTop: `1px solid ${t.border}`, marginTop: 40, padding: isMobile ? '36px 20px 52px' : '52px 28px 72px' }}>
+      <div style={{ maxWidth: 1120, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: isMobile ? 26 : 34 }}>
         <div>
           <div style={{ fontFamily: `${t.mono}, monospace`, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '.16em', color: t.muted, marginBottom: 14 }}>Education</div>
           <div style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 600, fontSize: 16 }}>Johns Hopkins University</div>

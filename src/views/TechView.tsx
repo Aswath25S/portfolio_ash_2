@@ -1,6 +1,7 @@
 import { content, TECH_HASHES } from '../data/content';
 import type { Theme } from '../data/theme';
 import { useHover } from '../hooks/useHover';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface TechViewProps {
   t: Theme;
@@ -33,6 +34,7 @@ function ProjectCard({ pr, t }: { pr: (typeof content.tech.projects)[number]; t:
 export function TechView({ t }: TechViewProps) {
   const cur = content.tech;
   const roles = cur.roles.map((r, i) => ({ ...r, hash: TECH_HASHES[i % TECH_HASHES.length] }));
+  const isMobile = useIsMobile();
 
   return (
     <div
@@ -41,7 +43,7 @@ export function TechView({ t }: TechViewProps) {
         animation: 'riseIn .5s ease both',
       }}
     >
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '44px 22px 8px', fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ maxWidth: 1060, margin: '0 auto', padding: isMobile ? '28px 16px 8px' : '44px 22px 8px', fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: 'hidden', background: t.surface, boxShadow: '0 24px 70px rgba(0,0,0,.35)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: `1px solid ${t.border}` }}>
             <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#ff5f56' }} />
@@ -49,7 +51,7 @@ export function TechView({ t }: TechViewProps) {
             <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#27c93f' }} />
             <span style={{ marginLeft: 12, fontSize: 12.5, color: t.muted }}>aswath@jhu — ~/tech — zsh</span>
           </div>
-          <div style={{ padding: '26px 22px' }}>
+          <div style={{ padding: isMobile ? '20px 16px' : '26px 22px' }}>
             <div style={{ fontSize: 13.5, color: t.muted }}>
               <span style={{ color: t.accent }}>aswath@jhu</span>:<span style={{ color: t.accent2 }}>~</span>$ whoami
             </div>
@@ -73,7 +75,7 @@ export function TechView({ t }: TechViewProps) {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '32px 22px', fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ maxWidth: 1060, margin: '0 auto', padding: isMobile ? '24px 16px' : '32px 22px', fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 22 }}>
           <span style={{ color: t.accent }}>$</span> git log --experience
         </div>
@@ -95,18 +97,18 @@ export function TechView({ t }: TechViewProps) {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '22px 22px', fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ maxWidth: 1060, margin: '0 auto', padding: isMobile ? '18px 16px' : '22px 22px', fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 18 }}>
           <span style={{ color: t.accent }}>$</span> ls ~/projects
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill,minmax(290px,1fr))', gap: 14 }}>
           {cur.projects.map((pr, i) => (
             <ProjectCard key={i} pr={pr} t={t} />
           ))}
         </div>
       </div>
 
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '30px 22px 20px', fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ maxWidth: 1060, margin: '0 auto', padding: isMobile ? '24px 16px 20px' : '30px 22px 20px', fontFamily: "'JetBrains Mono', monospace" }}>
         <div style={{ fontSize: 13, color: t.muted, marginBottom: 16 }}>
           <span style={{ color: t.accent }}>$</span> cat toolkit.json
         </div>

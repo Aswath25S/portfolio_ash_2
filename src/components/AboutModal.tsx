@@ -1,4 +1,5 @@
 import type { Theme } from '../data/theme';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface AboutModalProps {
   t: Theme;
@@ -7,6 +8,7 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ t, onClose, onDownloadResume }: AboutModalProps) {
+  const isMobile = useIsMobile();
   return (
     <div
       onClick={onClose}
@@ -20,7 +22,7 @@ export function AboutModal({ t, onClose, onDownloadResume }: AboutModalProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 24,
+        padding: isMobile ? 14 : 24,
       }}
     >
       <div
@@ -32,7 +34,7 @@ export function AboutModal({ t, onClose, onDownloadResume }: AboutModalProps) {
           borderRadius: 20,
           maxWidth: 560,
           width: '100%',
-          padding: 38,
+          padding: isMobile ? '30px 22px' : 38,
           position: 'relative',
           maxHeight: '88vh',
           overflow: 'auto',
@@ -44,7 +46,7 @@ export function AboutModal({ t, onClose, onDownloadResume }: AboutModalProps) {
         >
           ✕
         </button>
-        <div style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 30, letterSpacing: '-.01em' }}>Aswath Suresh</div>
+        <div style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: isMobile ? 25 : 30, letterSpacing: '-.01em', paddingRight: isMobile ? 40 : 0 }}>Aswath Suresh</div>
         <div style={{ color: t.accent, fontSize: 15, marginTop: 4, fontWeight: 600 }}>Jack of many trades, master of one degree.</div>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: t.fg, margin: '20px 0 0' }}>
           Recent MS Data Science grad from Johns Hopkins with an Aerospace degree from IIT Bombay. I wear multiple hats — shipping AI products as a founding engineer, sizing markets as a strategy consultant, running and expanding organizations, and doing stand-up on the side.

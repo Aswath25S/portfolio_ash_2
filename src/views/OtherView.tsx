@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { content, READING_ROTS } from '../data/content';
 import type { Theme } from '../data/theme';
 import { useHover } from '../hooks/useHover';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { burstConfetti } from '../utils/confetti';
 
 interface OtherViewProps {
@@ -192,6 +193,7 @@ const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'Ar
 
 export function OtherView({ t }: OtherViewProps) {
   const cur = content.reading;
+  const isMobile = useIsMobile();
 
   const [styleSeed, setStyleSeed] = useState(0);
   const [shuffleSpin, setShuffleSpin] = useState(false);
@@ -307,7 +309,7 @@ export function OtherView({ t }: OtherViewProps) {
 
   return (
     <div style={{ animation: 'riseIn .5s ease both', overflow: 'hidden' }}>
-      <div style={{ maxWidth: 1140, margin: '0 auto', padding: '52px 26px 12px' }}>
+      <div style={{ maxWidth: 1140, margin: '0 auto', padding: isMobile ? '32px 18px 10px' : '52px 26px 12px' }}>
         <div
           style={{
             fontFamily: "'Space Mono', monospace",
@@ -389,7 +391,7 @@ export function OtherView({ t }: OtherViewProps) {
         <p style={{ fontFamily: "'Spectral', serif", fontSize: 'clamp(17px,2vw,22px)', lineHeight: 1.5, color: t.muted, maxWidth: '52ch' }}>{cur.intro}</p>
       </div>
 
-      <div style={{ maxWidth: 1140, margin: '0 auto', padding: '24px 26px 30px' }}>
+      <div style={{ maxWidth: 1140, margin: '0 auto', padding: isMobile ? '18px 18px 24px' : '24px 26px 30px' }}>
         {sections.map((rs, si) => (
           <div key={si} style={{ marginBottom: 52 }}>
             <h2
@@ -408,7 +410,7 @@ export function OtherView({ t }: OtherViewProps) {
             >
               {rs.name}
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(232px,1fr))', gap: 26 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fill,minmax(140px,1fr))' : 'repeat(auto-fill,minmax(232px,1fr))', gap: isMobile ? 14 : 26 }}>
               {rs.items.map((it, i) => (
                 <CollageCard key={i} it={it} />
               ))}
@@ -432,7 +434,7 @@ export function OtherView({ t }: OtherViewProps) {
             >
               You weren't supposed to find this
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(232px,1fr))', gap: 26 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fill,minmax(140px,1fr))' : 'repeat(auto-fill,minmax(232px,1fr))', gap: isMobile ? 14 : 26 }}>
               <CollageCard
                 it={{ title: 'Congrats, detective.', by: 'Easter egg', note: "That's all there is. Go pet a dog or something.", color: '#a855f7', rot: '-2deg' }}
               />

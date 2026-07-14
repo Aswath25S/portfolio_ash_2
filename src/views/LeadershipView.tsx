@@ -1,5 +1,6 @@
 import { content, LEADERSHIP_ROMAN } from '../data/content';
 import type { Theme } from '../data/theme';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface LeadershipViewProps {
   t: Theme;
@@ -8,10 +9,11 @@ interface LeadershipViewProps {
 export function LeadershipView({ t }: LeadershipViewProps) {
   const cur = content.leadership;
   const roles = cur.roles.map((r, i) => ({ ...r, no: LEADERSHIP_ROMAN[i % LEADERSHIP_ROMAN.length] }));
+  const isMobile = useIsMobile();
 
   return (
     <div style={{ animation: 'riseIn .5s ease both' }}>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '56px 30px 8px' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: isMobile ? '34px 20px 8px' : '56px 30px 8px' }}>
         <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, letterSpacing: '.26em', textTransform: 'uppercase', color: t.accent, display: 'flex', gap: 14, alignItems: 'center' }}>
           <span>The Leadership Issue</span>
           <span style={{ flex: 1, height: 1, background: t.border }} />
@@ -30,13 +32,24 @@ export function LeadershipView({ t }: LeadershipViewProps) {
         </p>
       </div>
 
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 30px 10px' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: isMobile ? '18px 20px 10px' : '24px 30px 10px' }}>
         {roles.map((r, i) => (
-          <div key={i} style={{ borderTop: `1px solid ${t.border}`, padding: '36px 0', display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: 38 }}>
-            <div>
-              <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 56, color: t.accent, lineHeight: 0.85 }}>{r.no}</div>
-              <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', color: t.muted, marginTop: 14 }}>{r.dates}</div>
-              <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: t.muted, marginTop: 4 }}>{r.place}</div>
+          <div
+            key={i}
+            style={{
+              borderTop: `1px solid ${t.border}`,
+              padding: isMobile ? '26px 0' : '36px 0',
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 2.5fr',
+              gap: isMobile ? 14 : 38,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+              <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: isMobile ? 40 : 56, color: t.accent, lineHeight: 0.85 }}>{r.no}</div>
+              <div>
+                <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, letterSpacing: '.12em', textTransform: 'uppercase', color: t.muted }}>{r.dates}</div>
+                <div style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: t.muted, marginTop: 4 }}>{r.place}</div>
+              </div>
             </div>
             <div>
               <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(26px,3.4vw,40px)', color: t.fg, lineHeight: 1.08 }}>{r.role}</div>

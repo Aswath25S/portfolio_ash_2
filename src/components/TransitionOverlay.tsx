@@ -1,5 +1,6 @@
 import { Doodle, type DoodleId } from '../views/LandingView';
 import type { Mode } from '../data/theme';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface TransitionOverlayProps {
   active: boolean;
@@ -14,6 +15,7 @@ interface TransitionOverlayProps {
 }
 
 export function TransitionOverlay({ active, color, fg, label, num, font, isHome, doodleId, mode = 'dark' }: TransitionOverlayProps) {
+  const isMobile = useIsMobile();
   return (
     <div
       style={{
@@ -35,7 +37,7 @@ export function TransitionOverlay({ active, color, fg, label, num, font, isHome,
         // Heading back to the homepage should already show the name "in
         // costume" rather than a plain wordmark that then gets swapped for
         // the doodle a beat later once LandingView mounts.
-        <div style={{ transform: 'scale(3.2)' }}>
+        <div style={{ transform: `scale(${isMobile ? 1.7 : 3.2})` }}>
           <Doodle id={doodleId} mode={mode} />
         </div>
       ) : (
