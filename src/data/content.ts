@@ -60,7 +60,7 @@ export const content = {
   tech: {
     kicker: '01 — Engineering & Data Science',
     title: 'I build AI products end to end.',
-    intro: 'From generating datasets to shipping features to machine learning research to developing and testing trading strategies.',
+    intro: 'From generating datasets to shipping features to machine learning research to developing and testing trading strategies, have worked across multiple domains in tech.',
     roles: [
       { dates: 'Jan 2026 – Present', place: 'Baltimore, MD', role: 'Founding Engineer', org: 'EligioAI', orgDesc: 'AI platform for patient triage & clinician scheduling',
         summary: 'Built a healthcare platform from the ground up that makes patient triage more efficient. Built the RAG workflow to read, analyze and suggest the best clinician for the incoming patient.' },

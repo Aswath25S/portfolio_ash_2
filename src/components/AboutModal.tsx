@@ -47,7 +47,7 @@ export function AboutModal({ t, onClose, onDownloadResume }: AboutModalProps) {
         <div style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 30, letterSpacing: '-.01em' }}>Aswath Suresh</div>
         <div style={{ color: t.accent, fontSize: 15, marginTop: 4, fontWeight: 600 }}>Jack of many trades, master of one degree.</div>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: t.fg, margin: '20px 0 0' }}>
-          Recent MS Data Science grad from Johns Hopkins (B.Tech Aerospace, IIT Bombay). I ship AI products as a founding engineer, size markets as a strategy consultant, lead some of Hopkins' largest student orgs — and do stand-up on the side.
+          Recent MS Data Science grad from Johns Hopkins with an Aerospace degree from IIT Bombay. I wear multiple hats — shipping AI products as a founding engineer, sizing markets as a strategy consultant, running and expanding organizations, and doing stand-up on the side.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 24 }}>
           <a href="mailto:aswathsureshjhu@gmail.com" style={{ color: t.fg, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '12px 16px', borderRadius: 12, fontSize: 15 }}>
