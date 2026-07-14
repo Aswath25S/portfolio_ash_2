@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type R
 import type { CategoryMeta, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
 import { PaintCanvas } from '../components/PaintCanvas';
+import { PillButton } from '../components/PillButton';
 
 const TRADE_WORDS = [
   { word: 'software', color: '#4da3ff' },
@@ -628,7 +629,22 @@ function LandingPanel({ p, onEnter, first }: { p: CategoryMeta; onEnter: (id: Vi
       </div>
       <div style={{ position: 'relative' }}>
         <div style={{ fontSize: p.id === 'leadership' ? 17 : 15, opacity: 0.82, lineHeight: 1.45, marginBottom: 20, maxWidth: '34ch' }}>{p.tagline}</div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 14, fontWeight: 600, padding: '9px 16px', border: '1px solid currentColor', borderRadius: 999, opacity: 0.9 }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 9,
+            fontSize: 14,
+            fontWeight: 600,
+            padding: '9px 16px',
+            borderRadius: 999,
+            border: `1px solid ${hovered ? 'transparent' : 'currentColor'}`,
+            background: hovered ? p.panelFg : 'transparent',
+            color: hovered ? p.panelBg : 'currentColor',
+            opacity: hovered ? 1 : 0.9,
+            transition: 'background .2s ease, color .2s ease, border-color .2s ease',
+          }}
+        >
           Enter <span>→</span>
         </div>
       </div>
@@ -643,12 +659,12 @@ export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, o
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '26px 34px', position: 'relative', zIndex: 5 }}>
         <NameDoodle id={doodleId} onClick={onDoodleClick} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={onOpenModal} style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, padding: '9px 16px', borderRadius: 999, fontSize: 14, cursor: 'pointer' }}>
+          <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg}>
             About
-          </button>
-          <button onClick={onDownloadResume} style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, padding: '9px 16px', borderRadius: 999, fontSize: 14, cursor: 'pointer' }}>
+          </PillButton>
+          <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg}>
             Résumé ↓
-          </button>
+          </PillButton>
           <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: 38, height: 38, borderRadius: 999, fontSize: 15, cursor: 'pointer' }}>
             {modeIcon}
           </button>

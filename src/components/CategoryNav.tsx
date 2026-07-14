@@ -1,4 +1,5 @@
 import type { CategoryMeta, Theme, ViewId } from '../data/theme';
+import { PillButton } from './PillButton';
 
 interface CategoryNavProps {
   t: Theme;
@@ -58,12 +59,12 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
         })}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={onDownloadResume} style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, padding: '8px 14px', borderRadius: 999, fontSize: 13.5, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg} padding="8px 14px" fontSize={13.5}>
           Résumé ↓
-        </button>
-        <button onClick={onOpenModal} style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, padding: '8px 14px', borderRadius: 999, fontSize: 13.5, cursor: 'pointer' }}>
+        </PillButton>
+        <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg} padding="8px 14px" fontSize={13.5}>
           About
-        </button>
+        </PillButton>
         <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: 36, height: 36, borderRadius: 999, fontSize: 15, cursor: 'pointer' }}>
           {modeIcon}
         </button>
