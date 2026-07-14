@@ -1,3 +1,5 @@
+import { Doodle, type DoodleId } from '../views/LandingView';
+
 interface TransitionOverlayProps {
   active: boolean;
   color: string;
@@ -5,9 +7,11 @@ interface TransitionOverlayProps {
   label: string;
   num: string;
   font: string;
+  isHome?: boolean;
+  doodleId?: DoodleId;
 }
 
-export function TransitionOverlay({ active, color, fg, label, num, font }: TransitionOverlayProps) {
+export function TransitionOverlay({ active, color, fg, label, num, font, isHome, doodleId }: TransitionOverlayProps) {
   return (
     <div
       style={{
@@ -25,10 +29,19 @@ export function TransitionOverlay({ active, color, fg, label, num, font }: Trans
         fontFamily: `${font}, sans-serif`,
       }}
     >
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.24em', textTransform: 'uppercase', opacity: 0.6 }}>{num}</div>
-        <div style={{ fontSize: 'clamp(40px,8vw,110px)', fontWeight: 800, letterSpacing: '-.02em', marginTop: 10 }}>{label}</div>
-      </div>
+      {isHome && doodleId ? (
+        // Heading back to the homepage should already show the name "in
+        // costume" rather than a plain wordmark that then gets swapped for
+        // the doodle a beat later once LandingView mounts.
+        <div style={{ transform: 'scale(3.2)' }}>
+          <Doodle id={doodleId} />
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.24em', textTransform: 'uppercase', opacity: 0.6 }}>{num}</div>
+          <div style={{ fontSize: 'clamp(40px,8vw,110px)', fontWeight: 800, letterSpacing: '-.02em', marginTop: 10 }}>{label}</div>
+        </div>
+      )}
     </div>
   );
 }

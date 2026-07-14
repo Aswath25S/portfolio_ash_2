@@ -3,7 +3,7 @@ import { CategoryNav } from './components/CategoryNav';
 import { TransitionOverlay } from './components/TransitionOverlay';
 import { AboutModal } from './components/AboutModal';
 import { CategoryFooter } from './components/CategoryFooter';
-import { LandingView } from './views/LandingView';
+import { LandingView, DOODLE_IDS } from './views/LandingView';
 import { TechView } from './views/TechView';
 import { ConsultingView } from './views/ConsultingView';
 import { LeadershipView } from './views/LeadershipView';
@@ -25,9 +25,32 @@ function App() {
   const [mode, setMode] = useState<Mode>(CONFIG.defaultMode);
   const [modalOpen, setModalOpen] = useState(false);
   const [overlayActive, setOverlayActive] = useState(false);
-  const [overlay, setOverlay] = useState({ color: '#000', fg: '#fff', label: '', num: '', font: "'Bricolage Grotesque'" });
+  const [overlay, setOverlay] = useState({ color: '#000', fg: '#fff', label: '', num: '', font: "'Bricolage Grotesque'", isHome: false });
   const timeoutRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Lives here (not inside LandingView) so the exact same doodle the header
+  // is about to show can also play in the full-screen transition splash
+  // while navigating back home — see TransitionOverlay's isHome branch.
+  const [doodleIdx, setDoodleIdx] = useState(() => Math.floor(Math.random() * DOODLE_IDS.length));
+  const doodleTimerRef = useRef<number | null>(null);
+
+  function restartDoodleTimer() {
+    if (doodleTimerRef.current) window.clearInterval(doodleTimerRef.current);
+    doodleTimerRef.current = window.setInterval(() => setDoodleIdx((i) => (i + 1) % DOODLE_IDS.length), 4000);
+  }
+
+  useEffect(() => {
+    restartDoodleTimer();
+    return () => {
+      if (doodleTimerRef.current) window.clearInterval(doodleTimerRef.current);
+    };
+  }, []);
+
+  function advanceDoodle() {
+    setDoodleIdx((i) => (i + 1) % DOODLE_IDS.length);
+    restartDoodleTimer();
+  }
 
   useEffect(() => {
     let m: string | null = null;
@@ -95,6 +118,7 @@ function App() {
       label: next === 'landing' ? 'Aswath Suresh' : meta!.name,
       num: next === 'landing' ? '' : meta!.num,
       font: tt.head,
+      isHome: next === 'landing',
     });
     setOverlayActive(true);
     if (pushHistory) {
@@ -161,6 +185,8 @@ function App() {
           onDownloadResume={downloadResume}
           onToggleMode={toggleMode}
           modeIcon={modeIcon}
+          doodleId={DOODLE_IDS[doodleIdx]}
+          onDoodleClick={advanceDoodle}
         />
       ) : (
         <>
@@ -185,7 +211,16 @@ function App() {
 
       {modalOpen && <AboutModal t={t} onClose={() => setModalOpen(false)} onDownloadResume={downloadResume} />}
 
-      <TransitionOverlay active={overlayActive} color={overlay.color} fg={overlay.fg} label={overlay.label} num={overlay.num} font={overlay.font} />
+      <TransitionOverlay
+        active={overlayActive}
+        color={overlay.color}
+        fg={overlay.fg}
+        label={overlay.label}
+        num={overlay.num}
+        font={overlay.font}
+        isHome={overlay.isHome}
+        doodleId={DOODLE_IDS[doodleIdx]}
+      />
     </div>
   );
 }

@@ -115,6 +115,214 @@ function TradesWord() {
   );
 }
 
+// The wordmark cycles through unrelated visual identities on a timer, Google
+// Doodle style — each one is a fully different font/color/animation
+// treatment rather than a variation on a shared style, so the swap should
+// feel like a costume change, not a palette tweak.
+export const DOODLE_IDS = ['terminal', 'neon', 'ticker', 'stamp', 'pixel', 'rainbow', 'comic', 'marker'] as const;
+export type DoodleId = (typeof DOODLE_IDS)[number];
+
+export function Doodle({ id }: { id: DoodleId }) {
+  if (id === 'terminal') {
+    return (
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 17,
+          fontWeight: 700,
+          color: '#39ff14',
+          background: '#05080a',
+          border: '1px solid #16241f',
+          borderRadius: 6,
+          padding: '6px 11px',
+        }}
+      >
+        <span style={{ opacity: 0.55 }}>{'>'}</span>
+        <span>Aswath Suresh</span>
+        <span style={{ display: 'inline-block', width: 8, height: 15, background: '#39ff14', animation: 'blink 1s steps(1) infinite' }} />
+      </div>
+    );
+  }
+  if (id === 'neon') {
+    return (
+      <div
+        style={{
+          fontFamily: "'Monoton', cursive",
+          fontSize: 21,
+          letterSpacing: '.02em',
+          color: '#fff',
+          textShadow: '0 0 4px #fff, 0 0 11px #ff2ec4, 0 0 19px #ff2ec4, 0 0 40px #ff2ec4, 0 0 80px #b026ff',
+          animation: 'neonFlicker 2.8s infinite',
+        }}
+      >
+        Aswath Suresh
+      </div>
+    );
+  }
+  if (id === 'ticker') {
+    return (
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 9,
+          fontFamily: "'Space Mono', monospace",
+          fontSize: 14,
+          fontWeight: 700,
+          letterSpacing: '.1em',
+          textTransform: 'uppercase',
+          color: '#19c37d',
+          background: '#07130d',
+          border: '1px solid #163b28',
+          borderRadius: 5,
+          padding: '7px 13px',
+        }}
+      >
+        <span>▲</span>
+        <span>Aswath Suresh</span>
+        <span
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: 40,
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent)',
+            animation: 'tickerSweep 2.2s linear infinite',
+          }}
+        />
+      </div>
+    );
+  }
+  if (id === 'stamp') {
+    return (
+      <div
+        style={{
+          display: 'inline-block',
+          fontFamily: "'Bungee', sans-serif",
+          fontSize: 16,
+          color: '#e0473e',
+          border: '3px solid #e0473e',
+          boxShadow: 'inset 0 0 0 2px #e0473e',
+          borderRadius: 4,
+          padding: '5px 13px 5px 11px',
+          transform: 'rotate(-4deg)',
+          letterSpacing: '.03em',
+          textTransform: 'uppercase',
+          opacity: 0.9,
+        }}
+      >
+        Aswath Suresh
+      </div>
+    );
+  }
+  if (id === 'pixel') {
+    return (
+      <div
+        style={{
+          fontFamily: "'Press Start 2P', monospace",
+          fontSize: 10.5,
+          lineHeight: 1.6,
+          color: '#ffd966',
+          textShadow: '2px 2px 0 #6a3fb5, 4px 4px 0 #2a1a4a',
+          letterSpacing: '.02em',
+        }}
+      >
+        ASWATH SURESH
+      </div>
+    );
+  }
+  if (id === 'rainbow') {
+    return (
+      <div
+        style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontWeight: 800,
+          fontSize: 20,
+          letterSpacing: '-.01em',
+          backgroundImage: 'linear-gradient(90deg, #ff5c7a, #ffb020, #6bcb3f, #2ec4b6, #4da3ff, #b16cff, #ff5c7a)',
+          backgroundSize: '300% 100%',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          color: 'transparent',
+          animation: 'rainbowShift 5s linear infinite',
+        }}
+      >
+        Aswath Suresh
+      </div>
+    );
+  }
+  if (id === 'comic') {
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: -7,
+            backgroundImage: 'radial-gradient(#ffcf2e 1px, transparent 1.4px)',
+            backgroundSize: '5px 5px',
+            opacity: 0.55,
+            borderRadius: 6,
+            zIndex: -1,
+          }}
+        />
+        <span
+          style={{
+            display: 'inline-block',
+            fontFamily: "'Bungee', sans-serif",
+            fontSize: 16,
+            color: '#fff',
+            WebkitTextStroke: '2px #141210',
+            transform: 'rotate(-2deg)',
+          }}
+        >
+          Aswath Suresh
+        </span>
+      </div>
+    );
+  }
+  // marker
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: 29, color: '#f4f2ea', transform: 'rotate(-3deg)' }}>
+      Aswath Suresh
+      <svg viewBox="0 0 200 10" preserveAspectRatio="none" style={{ position: 'absolute', left: 0, bottom: -3, width: '100%', height: 9 }}>
+        <path d="M2,6 Q50,0 100,6 T198,5" stroke="#ff5c7a" strokeWidth={3} fill="none" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
+// Index + auto-advance timer live in App (see doodleId/onDoodleClick) so the
+// exact same doodle can also appear in the full-screen transition splash
+// when navigating back home — this component just renders whichever one
+// it's told to, plus the pop-in on change and a click-to-remix handler.
+function NameDoodle({ id, onClick }: { id: DoodleId; onClick: () => void }) {
+  const [hovered, handlers] = useHover();
+  return (
+    <div
+      {...handlers}
+      onClick={onClick}
+      title="Click for a different look"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        minHeight: 40,
+        cursor: 'pointer',
+        transform: hovered ? 'scale(1.04)' : 'none',
+        transition: 'transform .2s ease',
+      }}
+    >
+      <div key={id} style={{ animation: 'doodleIn .5s cubic-bezier(.22,1,.36,1) both' }}>
+        <Doodle id={id} />
+      </div>
+    </div>
+  );
+}
+
 interface LandingViewProps {
   t: Theme;
   cats: CategoryMeta[];
@@ -123,6 +331,8 @@ interface LandingViewProps {
   onDownloadResume: () => void;
   onToggleMode: () => void;
   modeIcon: string;
+  doodleId: DoodleId;
+  onDoodleClick: () => void;
 }
 
 // Each panel's heading sits far from its tagline in this tall layout — rather
@@ -426,12 +636,12 @@ function LandingPanel({ p, onEnter, first }: { p: CategoryMeta; onEnter: (id: Vi
   );
 }
 
-export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon }: LandingViewProps) {
+export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon, doodleId, onDoodleClick }: LandingViewProps) {
   return (
     <div style={{ minHeight: 'var(--app-vh, 100dvh)', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
       <PaintCanvas color={t.accent2} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '26px 34px', position: 'relative', zIndex: 5 }}>
-        <div style={{ fontFamily: `${t.head}, sans-serif`, fontWeight: 800, fontSize: 20, letterSpacing: '-.01em' }}>Aswath Suresh</div>
+        <NameDoodle id={doodleId} onClick={onDoodleClick} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={onOpenModal} style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, padding: '9px 16px', borderRadius: 999, fontSize: 14, cursor: 'pointer' }}>
             About
