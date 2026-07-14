@@ -1,4 +1,5 @@
 import { Doodle, type DoodleId } from '../views/LandingView';
+import type { Mode } from '../data/theme';
 
 interface TransitionOverlayProps {
   active: boolean;
@@ -9,9 +10,10 @@ interface TransitionOverlayProps {
   font: string;
   isHome?: boolean;
   doodleId?: DoodleId;
+  mode?: Mode;
 }
 
-export function TransitionOverlay({ active, color, fg, label, num, font, isHome, doodleId }: TransitionOverlayProps) {
+export function TransitionOverlay({ active, color, fg, label, num, font, isHome, doodleId, mode = 'dark' }: TransitionOverlayProps) {
   return (
     <div
       style={{
@@ -34,7 +36,7 @@ export function TransitionOverlay({ active, color, fg, label, num, font, isHome,
         // costume" rather than a plain wordmark that then gets swapped for
         // the doodle a beat later once LandingView mounts.
         <div style={{ transform: 'scale(3.2)' }}>
-          <Doodle id={doodleId} />
+          <Doodle id={doodleId} mode={mode} />
         </div>
       ) : (
         <div style={{ textAlign: 'center' }}>

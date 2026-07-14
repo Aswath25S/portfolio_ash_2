@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
-import type { CategoryMeta, Theme, ViewId } from '../data/theme';
+import type { CategoryMeta, Mode, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
 import { PaintCanvas } from '../components/PaintCanvas';
 import { PillButton } from '../components/PillButton';
@@ -123,7 +123,8 @@ function TradesWord() {
 export const DOODLE_IDS = ['terminal', 'neon', 'ticker', 'stamp', 'pixel', 'rainbow', 'comic', 'marker'] as const;
 export type DoodleId = (typeof DOODLE_IDS)[number];
 
-export function Doodle({ id }: { id: DoodleId }) {
+export function Doodle({ id, mode }: { id: DoodleId; mode: Mode }) {
+  const dark = mode !== 'light';
   if (id === 'terminal') {
     return (
       <div
@@ -148,14 +149,20 @@ export function Doodle({ id }: { id: DoodleId }) {
     );
   }
   if (id === 'neon') {
+    // The classic look is a white-hot tube core haloed in color — reads
+    // great on a dark wall, but a white core (and a white glow layer) both
+    // wash out to nothing against a light page, so light mode drops the
+    // white entirely and lets the tube itself be the saturated color.
     return (
       <div
         style={{
           fontFamily: "'Monoton', cursive",
           fontSize: 21,
           letterSpacing: '.02em',
-          color: '#fff',
-          textShadow: '0 0 4px #fff, 0 0 11px #ff2ec4, 0 0 19px #ff2ec4, 0 0 40px #ff2ec4, 0 0 80px #b026ff',
+          color: dark ? '#fff' : '#a3116e',
+          textShadow: dark
+            ? '0 0 4px #fff, 0 0 11px #ff2ec4, 0 0 19px #ff2ec4, 0 0 40px #ff2ec4, 0 0 80px #b026ff'
+            : '0 0 5px #ff2ec4, 0 0 12px #ff2ec4, 0 0 24px #b026ff',
           animation: 'neonFlicker 2.8s infinite',
         }}
       >
@@ -222,13 +229,17 @@ export function Doodle({ id }: { id: DoodleId }) {
     );
   }
   if (id === 'pixel') {
+    // Pale gold reads fine against a near-black panel but nearly disappears
+    // against the cream light-mode background — the dark drop-shadow
+    // blocks still give it a 3D edge either way, so only the fill needs to
+    // swap to something with actual contrast on light.
     return (
       <div
         style={{
           fontFamily: "'Press Start 2P', monospace",
           fontSize: 10.5,
           lineHeight: 1.6,
-          color: '#ffd966',
+          color: dark ? '#ffd966' : '#8a5a00',
           textShadow: '2px 2px 0 #6a3fb5, 4px 4px 0 #2a1a4a',
           letterSpacing: '.02em',
         }}
@@ -286,9 +297,21 @@ export function Doodle({ id }: { id: DoodleId }) {
       </div>
     );
   }
-  // marker
+  // marker — the cream ink is legible on the dark page's near-black
+  // background, but it's the exact same cream as the light page's own
+  // background, so it renders literally invisible there without this swap.
   return (
-    <div style={{ position: 'relative', display: 'inline-block', fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: 29, color: '#f4f2ea', transform: 'rotate(-3deg)' }}>
+    <div
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        fontFamily: "'Caveat', cursive",
+        fontWeight: 700,
+        fontSize: 29,
+        color: dark ? '#f4f2ea' : '#2a2620',
+        transform: 'rotate(-3deg)',
+      }}
+    >
       Aswath Suresh
       <svg viewBox="0 0 200 10" preserveAspectRatio="none" style={{ position: 'absolute', left: 0, bottom: -3, width: '100%', height: 9 }}>
         <path d="M2,6 Q50,0 100,6 T198,5" stroke="#ff5c7a" strokeWidth={3} fill="none" strokeLinecap="round" />
@@ -301,7 +324,7 @@ export function Doodle({ id }: { id: DoodleId }) {
 // exact same doodle can also appear in the full-screen transition splash
 // when navigating back home — this component just renders whichever one
 // it's told to, plus the pop-in on change and a click-to-remix handler.
-function NameDoodle({ id, onClick }: { id: DoodleId; onClick: () => void }) {
+function NameDoodle({ id, mode, onClick }: { id: DoodleId; mode: Mode; onClick: () => void }) {
   const [hovered, handlers] = useHover();
   return (
     <div
@@ -318,7 +341,7 @@ function NameDoodle({ id, onClick }: { id: DoodleId; onClick: () => void }) {
       }}
     >
       <div key={id} style={{ animation: 'doodleIn .5s cubic-bezier(.22,1,.36,1) both' }}>
-        <Doodle id={id} />
+        <Doodle id={id} mode={mode} />
       </div>
     </div>
   );
@@ -326,6 +349,7 @@ function NameDoodle({ id, onClick }: { id: DoodleId; onClick: () => void }) {
 
 interface LandingViewProps {
   t: Theme;
+  mode: Mode;
   cats: CategoryMeta[];
   onEnter: (id: ViewId) => void;
   onOpenModal: () => void;
@@ -414,18 +438,44 @@ function valueAtX(points: [number, number][], x: number) {
 const SPRING_STIFFNESS = 90;
 const SPRING_DAMPING = 6;
 
-function ShakyLine({ points, color }: { points: [number, number][]; color: string }) {
+// Periodic traveling pulse — a sharp upward spike with a smaller rebound
+// dip right behind it, like an EKG blip — sweeps left-to-right across each
+// panel's line on a timer, independent of the spring above. Two of these
+// fired close together per beat is the "lub-dub". Panels stagger their
+// start via pulseDelay so it reads as one wave propagating rightward
+// through all four lines rather than four lines blinking in sync.
+const PULSE_SWEEP_MS = 650;
+const PULSE_AMP = 8;
+const PULSE_SIGMA1 = 3;
+const PULSE_REBOUND_AMP = 3.5;
+const PULSE_REBOUND_OFFSET = 5;
+const PULSE_SIGMA2 = 3.5;
+const LUB_DUB_GAP_MS = 260;
+
+function pulseShapeOffset(dx: number) {
+  const spike = PULSE_AMP * Math.exp(-(dx * dx) / (2 * PULSE_SIGMA1 * PULSE_SIGMA1));
+  const rebound = PULSE_REBOUND_AMP * Math.exp(-((dx - PULSE_REBOUND_OFFSET) ** 2) / (2 * PULSE_SIGMA2 * PULSE_SIGMA2));
+  return -spike + rebound; // negative = visually up (SVG y grows down), positive = the dip right after
+}
+
+function ShakyLine({ points, color, pulseTrigger, pulseDelay }: { points: [number, number][]; color: string; pulseTrigger: number; pulseDelay: number }) {
   const pathRef = useRef<SVGPathElement>(null);
   const offsets = useRef(new Float32Array(points.length));
   const velocities = useRef(new Float32Array(points.length));
   const rafRef = useRef<number | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const pulses = useRef<{ start: number; amp: number }[]>([]);
+  const prevTrigger = useRef(pulseTrigger);
 
   useEffect(() => {
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
+
+  function ensureLoop() {
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+  }
 
   function tick() {
     const dt = 1 / 60;
@@ -439,8 +489,20 @@ function ShakyLine({ points, color }: { points: [number, number][]; color: strin
       offsets.current[i] = no;
       energy += Math.abs(no) + Math.abs(nv);
     }
-    pathRef.current?.setAttribute('d', pointsToPath(points, offsets.current));
-    if (energy > 0.03) {
+
+    const now = performance.now();
+    pulses.current = pulses.current.filter((p) => now - p.start <= PULSE_SWEEP_MS);
+    const combined = new Float32Array(points.length);
+    for (const p of pulses.current) {
+      const waveX = -15 + 130 * ((now - p.start) / PULSE_SWEEP_MS);
+      for (let i = 0; i < points.length; i++) {
+        combined[i] += p.amp * pulseShapeOffset(points[i][0] - waveX);
+      }
+    }
+    for (let i = 0; i < points.length; i++) combined[i] += offsets.current[i];
+
+    pathRef.current?.setAttribute('d', pointsToPath(points, combined));
+    if (energy > 0.03 || pulses.current.length > 0) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
       rafRef.current = null;
@@ -449,6 +511,24 @@ function ShakyLine({ points, color }: { points: [number, number][]; color: strin
       pathRef.current?.setAttribute('d', pointsToPath(points, offsets.current));
     }
   }
+
+  useEffect(() => {
+    if (pulseTrigger === prevTrigger.current) return;
+    prevTrigger.current = pulseTrigger;
+    const lub = window.setTimeout(() => {
+      pulses.current.push({ start: performance.now(), amp: 1 });
+      ensureLoop();
+    }, pulseDelay);
+    const dub = window.setTimeout(() => {
+      pulses.current.push({ start: performance.now(), amp: 0.6 });
+      ensureLoop();
+    }, pulseDelay + LUB_DUB_GAP_MS);
+    return () => {
+      window.clearTimeout(lub);
+      window.clearTimeout(dub);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pulseTrigger]);
 
   function handleMove(e: ReactMouseEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -468,7 +548,7 @@ function ShakyLine({ points, color }: { points: [number, number][]; color: strin
       const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
       velocities.current[i] += w * impulse * (i % 2 === 0 ? 1 : -1);
     }
-    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+    ensureLoop();
   }
 
   return (
@@ -493,7 +573,19 @@ function ShakyLine({ points, color }: { points: [number, number][]; color: strin
   );
 }
 
-function PanelMotif({ id, fg, first }: { id: Exclude<ViewId, 'landing'>; fg: string; first: boolean }) {
+function PanelMotif({
+  id,
+  fg,
+  first,
+  pulseTrigger,
+  pulseDelay,
+}: {
+  id: Exclude<ViewId, 'landing'>;
+  fg: string;
+  first: boolean;
+  pulseTrigger: number;
+  pulseDelay: number;
+}) {
   let texture: ReactNode = null;
   if (id === 'tech') {
     texture = (
@@ -557,7 +649,7 @@ function PanelMotif({ id, fg, first }: { id: Exclude<ViewId, 'landing'>; fg: str
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
       {texture}
       <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
-        <ShakyLine points={LINE_POINTS[id]} color={lineColor} />
+        <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} />
         {!first && (
           <span
             style={{
@@ -581,7 +673,21 @@ function PanelMotif({ id, fg, first }: { id: Exclude<ViewId, 'landing'>; fg: str
   );
 }
 
-function LandingPanel({ p, onEnter, first }: { p: CategoryMeta; onEnter: (id: ViewId) => void; first: boolean }) {
+const INTER_PANEL_DELAY_MS = 480;
+
+function LandingPanel({
+  p,
+  onEnter,
+  first,
+  index,
+  pulseTrigger,
+}: {
+  p: CategoryMeta;
+  onEnter: (id: ViewId) => void;
+  first: boolean;
+  index: number;
+  pulseTrigger: number;
+}) {
   const [hovered, handlers] = useHover();
   return (
     <div
@@ -606,7 +712,13 @@ function LandingPanel({ p, onEnter, first }: { p: CategoryMeta; onEnter: (id: Vi
         boxShadow: hovered ? '0 26px 70px rgba(0,0,0,.4)' : 'none',
       }}
     >
-      <PanelMotif id={p.id as Exclude<ViewId, 'landing'>} fg={p.panelFg} first={first} />
+      <PanelMotif
+        id={p.id as Exclude<ViewId, 'landing'>}
+        fg={p.panelFg}
+        first={first}
+        pulseTrigger={pulseTrigger}
+        pulseDelay={index * INTER_PANEL_DELAY_MS}
+      />
       <div style={{ position: 'relative' }}>
         <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 13, letterSpacing: '.16em', opacity: 0.65 }}>{p.num}</div>
         <div
@@ -652,12 +764,27 @@ function LandingPanel({ p, onEnter, first }: { p: CategoryMeta; onEnter: (id: Vi
   );
 }
 
-export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon, doodleId, onDoodleClick }: LandingViewProps) {
+const HEARTBEAT_INTERVAL_MS = 5200;
+
+export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon, doodleId, onDoodleClick }: LandingViewProps) {
+  // One shared counter drives every panel's line — each panel just delays
+  // its own reaction by index * INTER_PANEL_DELAY_MS, so a single tick here
+  // reads as one pulse travelling left-to-right through all four lines.
+  const [pulseTrigger, setPulseTrigger] = useState(0);
+  useEffect(() => {
+    const kick = window.setTimeout(() => setPulseTrigger((n) => n + 1), 1200);
+    const id = window.setInterval(() => setPulseTrigger((n) => n + 1), HEARTBEAT_INTERVAL_MS);
+    return () => {
+      window.clearTimeout(kick);
+      window.clearInterval(id);
+    };
+  }, []);
+
   return (
     <div style={{ minHeight: 'var(--app-vh, 100dvh)', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
       <PaintCanvas color={t.accent2} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '26px 34px', position: 'relative', zIndex: 5 }}>
-        <NameDoodle id={doodleId} onClick={onDoodleClick} />
+        <NameDoodle id={doodleId} mode={mode} onClick={onDoodleClick} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg}>
             About
@@ -682,7 +809,7 @@ export function LandingView({ t, cats, onEnter, onOpenModal, onDownloadResume, o
 
       <div style={{ flex: '1 1 auto', display: 'flex', gap: 14, padding: '18px 20px 26px', position: 'relative', zIndex: 1 }}>
         {cats.map((p, i) => (
-          <LandingPanel key={p.id} p={p} onEnter={onEnter} first={i === 0} />
+          <LandingPanel key={p.id} p={p} onEnter={onEnter} first={i === 0} index={i} pulseTrigger={pulseTrigger} />
         ))}
       </div>
     </div>

@@ -195,6 +195,7 @@ function App() {
         {isLanding ? (
           <LandingView
             t={t}
+            mode={mode}
             cats={cats}
             onEnter={transitionTo}
             onOpenModal={() => setModalOpen(true)}
@@ -236,6 +237,7 @@ function App() {
           font={overlay.font}
           isHome={overlay.isHome}
           doodleId={DOODLE_IDS[doodleIdx]}
+          mode={mode}
         />
       </div>
     </>
