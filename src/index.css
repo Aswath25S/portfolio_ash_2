@@ -42,6 +42,13 @@ body {
   border-radius: 8px;
 }
 
+/* Horizontally-scrolling strips (e.g. the mobile category nav pills) whose
+   scrollability is already implied by a partially-cut-off item at the
+   edge — an explicit scrollbar underneath just adds visual noise. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes blink {
   0%,
   49% {

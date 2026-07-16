@@ -42,6 +42,7 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
         ← Aswath Suresh
       </div>
       <div
+        className={isMobile ? 'no-scrollbar' : undefined}
         style={{
           order: isMobile ? 3 : 2,
           display: 'flex',
@@ -51,6 +52,7 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
           flexBasis: isMobile ? '100%' : 'auto',
           overflowX: isMobile ? 'auto' : 'visible',
           WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: isMobile ? 'none' : undefined,
         }}
       >
         {cats.map((p) => {
@@ -65,6 +67,7 @@ export function CategoryNav({ t, cats, activeView, onGoHome, onEnter, onOpenModa
                 border: `1px solid ${active ? t.accent : t.border}`,
                 padding: '8px 15px',
                 borderRadius: 999,
+                fontFamily: "'Space Grotesk', sans-serif",
                 fontSize: 13.5,
                 fontWeight: 600,
                 cursor: 'pointer',

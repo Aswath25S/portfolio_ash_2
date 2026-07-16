@@ -856,7 +856,7 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
         }}
       >
         <NameDoodle id={doodleId} mode={mode} onClick={onDoodleClick} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexBasis: isMobile ? '100%' : 'auto' }}>
           <PillButton onClick={onOpenModal} accent={t.accent} border={t.border} fg={t.fg} padding={isMobile ? '8px 14px' : undefined} fontSize={isMobile ? 13.5 : undefined}>
             About
           </PillButton>
