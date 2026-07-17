@@ -386,6 +386,57 @@ const LINE_COLORS: Record<Exclude<ViewId, 'landing'>, string> = {
 // sits on top of the line.
 const LINE_GUTTER = 26;
 
+// Cubic-bezier point evaluator for one Catmull-Rom segment (p1 -> p2, with
+// neighbors p0/p3 shaping the tangents) — used by resampleSmooth below to
+// turn a few sparse anchors into a dense point set lying on the curve.
+function catmullRomPoint(p0: [number, number], p1: [number, number], p2: [number, number], p3: [number, number], t: number): [number, number] {
+  const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+  const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+  const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+  const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+  const mt = 1 - t;
+  const x = mt * mt * mt * p1[0] + 3 * mt * mt * t * c1x + 3 * mt * t * t * c2x + t * t * t * p2[0];
+  const y = mt * mt * mt * p1[1] + 3 * mt * mt * t * c1y + 3 * mt * t * t * c2y + t * t * t * p2[1];
+  return [x, y];
+}
+
+// Turns a handful of hand-placed anchor points into a dense point set lying
+// exactly on the smooth curve through them. Leadership's line needs this:
+// with only ~12 sparse anchors, the cursor hit-test and spring physics
+// below (which reason in straight lines between points) disagreed
+// noticeably with the actual rendered bezier curve between them, so
+// hovering the line felt like it was reacting to the wrong spot. Densifying
+// first means "straight line between points" and "the curve" are close
+// enough to be the same thing, so hit-testing and physics line up with
+// what's on screen.
+function resampleSmooth(anchors: [number, number][], perSegment: number): [number, number][] {
+  const out: [number, number][] = [anchors[0]];
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const p0 = anchors[i === 0 ? 0 : i - 1];
+    const p1 = anchors[i];
+    const p2 = anchors[i + 1];
+    const p3 = anchors[i + 2 < anchors.length ? i + 2 : i + 1];
+    for (let s = 1; s <= perSegment; s++) {
+      out.push(catmullRomPoint(p0, p1, p2, p3, s / perSegment));
+    }
+  }
+  return out;
+}
+
+// A genuine sine wave — 2 full cycles, rising from the Consulting handoff
+// height (8) to the Reading handoff height (20) — rather than the single
+// asymmetric dip this used to be. Anchors are evenly spaced on purpose:
+// Catmull-Rom's tangent at a point is shaped by how far its neighbors sit,
+// so uneven spacing landing right on a peak/trough (as the old hand-placed
+// x-positions did once the shape changed to a wave) produces a lopsided,
+// visibly kinked tangent right at the peak instead of a rounded one.
+const LEADERSHIP_ANCHOR_X = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+const LEADERSHIP_ANCHORS: [number, number][] = LEADERSHIP_ANCHOR_X.map((x) => {
+  const midline = 8 + (20 - 8) * (x / 100);
+  const wave = 7 * Math.sin((2 * Math.PI * x) / 50); // period 50 -> 0 at x=0, 50, 100
+  return [x, midline + wave] as [number, number];
+});
+
 // Point-sampled (rather than bezier/H-V path strings) so each line can be
 // perturbed per-point for the cursor "pluck" interaction below. Duplicate-x
 // pairs fake the right-angle jumps for Tech/Consulting's chart look.
@@ -398,10 +449,7 @@ const LINE_POINTS: Record<Exclude<ViewId, 'landing'>, [number, number][]> = {
     [0, 20], [12, 20], [12, 17], [26, 17], [26, 14], [40, 14],
     [40, 12], [54, 12], [54, 10], [68, 10], [68, 9], [82, 9], [82, 8], [100, 8],
   ],
-  leadership: [
-    [0, 8], [10, 9], [20, 17], [30, 25], [35, 26], [45, 25],
-    [55, 14], [65, 11], [70, 12], [80, 15], [90, 19], [100, 20],
-  ],
+  leadership: resampleSmooth(LEADERSHIP_ANCHORS, 8),
   reading: [
     [0, 20], [6, 14], [12, 24], [18, 16], [24, 26], [30, 18], [36, 22], [42, 14], [48, 24],
     [54, 17], [60, 23], [66, 15], [72, 21], [78, 13], [84, 23], [90, 17], [96, 20], [100, 19],
@@ -425,6 +473,13 @@ const PANEL_TAGS: Record<Exclude<ViewId, 'landing'>, string> = {
 // the left edge instead of through the middle, so there the along-length
 // coordinate has to drive the SVG's y (height) and thickness drives x
 // (width) — same points, same physics, just read out swapped.
+//
+// Deliberately plain `L` segments, even for Leadership's curvy line — its
+// points are pre-densified by resampleSmooth so consecutive points are only
+// ~1-2 units apart, which already reads as a smooth curve. That also keeps
+// this function's straight-line interpretation of the points identical to
+// valueAtX's below, so the cursor hit-test and the physics react to exactly
+// where the line is actually drawn instead of a smoothed approximation of it.
 function pointsToPath(points: [number, number][], offsets: Float32Array, vertical: boolean) {
   return points
     .map(([x, y], i) => {
@@ -455,6 +510,16 @@ function valueAtX(points: [number, number][], x: number) {
 const SPRING_STIFFNESS = 90;
 const SPRING_DAMPING = 6;
 
+// Leadership's "loose thread" physics: each point is also pulled toward its
+// neighbors' offsets (not just back toward its own rest position), so a
+// disturbance propagates down the line instead of every point oscillating
+// in place, independently, at the same frequency. Softer self-restoring
+// force + lighter damping than the spring above means it takes longer, and
+// wobbles more, to settle — slack instead of taut.
+const THREAD_STIFFNESS = 34;
+const THREAD_DAMPING = 3.2;
+const THREAD_COUPLING = 55;
+
 // Periodic traveling pulse — a sharp upward spike with a smaller rebound
 // dip right behind it, like an EKG blip — sweeps left-to-right across each
 // panel's line on a timer, independent of the spring above. Two of these
@@ -481,12 +546,22 @@ function ShakyLine({
   pulseTrigger,
   pulseDelay,
   vertical = false,
+  threadPhysics = false,
 }: {
   points: [number, number][];
   color: string;
   pulseTrigger: number;
   pulseDelay: number;
   vertical?: boolean;
+  // Tech/Consulting/Reading's pluck alternates sign point-to-point, which
+  // reads as a buzz/shake — fitting for a jagged chart or scribble. Leadership
+  // instead gets: (1) every affected point pushed the same way — toward
+  // whichever side of the curve the cursor is on, like it's dragging the
+  // line — and (2) points elastically coupled to their neighbors (see
+  // THREAD_* below) instead of springing back independently, so a pluck
+  // ripples down the curve and settles unevenly like a loose thread rather
+  // than the whole bump bouncing back in lockstep.
+  threadPhysics?: boolean;
 }) {
   const pathRef = useRef<SVGPathElement>(null);
   const offsets = useRef(new Float32Array(points.length));
@@ -509,11 +584,29 @@ function ShakyLine({
   function tick() {
     const dt = 1 / 60;
     let energy = 0;
+    // Neighbor coupling reads last frame's offsets (a full snapshot) rather
+    // than the array being mutated in this same pass — otherwise point i's
+    // update would see point i-1's brand-new value but point i+1's stale
+    // one, biasing the ripple to always drift one direction.
+    const prevOffsets = threadPhysics ? offsets.current.slice() : null;
     for (let i = 0; i < points.length; i++) {
       const o = offsets.current[i];
       const v = velocities.current[i];
-      const nv = v + (-SPRING_STIFFNESS * o - SPRING_DAMPING * v) * dt;
-      const no = o + nv * dt;
+      let accel: number;
+      if (prevOffsets) {
+        const left = i > 0 ? prevOffsets[i - 1] : o;
+        const right = i < points.length - 1 ? prevOffsets[i + 1] : o;
+        const tension = (left + right - 2 * o) * THREAD_COUPLING;
+        accel = -THREAD_STIFFNESS * o - THREAD_DAMPING * v + tension;
+      } else {
+        accel = -SPRING_STIFFNESS * o - SPRING_DAMPING * v;
+      }
+      const nv = v + accel * dt;
+      // Hard safety net: a fast flurry of pointer events can add impulses
+      // faster than a single frame's damping removes them (more so with
+      // thread mode's lighter damping), so clamp rather than let a burst of
+      // input ever fling the curve past the visible band.
+      const no = Math.max(-25, Math.min(25, o + nv * dt));
       velocities.current[i] = nv;
       offsets.current[i] = no;
       energy += Math.abs(no) + Math.abs(nv);
@@ -531,7 +624,10 @@ function ShakyLine({
     for (let i = 0; i < points.length; i++) combined[i] += offsets.current[i];
 
     pathRef.current?.setAttribute('d', pointsToPath(points, combined, vertical));
-    if (energy > 0.03 || pulses.current.length > 0) {
+    // Averaged rather than summed so lines with more points (Leadership's
+    // densified curve has ~4x Tech's) don't take proportionally longer to
+    // be judged "settled" for the exact same per-point wobble.
+    if (energy / points.length > 0.03 || pulses.current.length > 0) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
       rafRef.current = null;
@@ -567,15 +663,26 @@ function ShakyLine({
     const last = lastPos.current;
     lastPos.current = { x: localX, y: localY };
     if (localX < 0 || localX > 100) return;
-    if (Math.abs(localY - valueAtX(points, localX)) > 7) return; // only react near the actual stroke
+    const dyFromLine = localY - valueAtX(points, localX);
+    if (Math.abs(dyFromLine) > 7) return; // only react near the actual stroke
 
     const speed = last ? Math.min(Math.hypot(localX - last.x, localY - last.y) * 8, 50) : 14;
     const impulse = 10 + speed * 0.9;
-    const sigma = 12;
+    // Thread mode keeps the kick tight around the cursor and lets neighbor
+    // coupling carry it outward over subsequent frames — a wide sigma here
+    // would shove a big swath of the (now densely-sampled) curve the same
+    // direction in one shot, and with the softer damping "loose" wants,
+    // that much simultaneous energy can fling the line well past the
+    // visible band before it has time to dissipate.
+    const sigma = threadPhysics ? 5 : 12;
+    const coherentSign = Math.sign(dyFromLine) || 1;
+    const VELOCITY_CAP = 60;
     for (let i = 0; i < points.length; i++) {
       const dx = points[i][0] - localX;
       const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
-      velocities.current[i] += w * impulse * (i % 2 === 0 ? 1 : -1);
+      const sign = threadPhysics ? coherentSign : i % 2 === 0 ? 1 : -1;
+      const nextV = velocities.current[i] + w * impulse * sign;
+      velocities.current[i] = Math.max(-VELOCITY_CAP, Math.min(VELOCITY_CAP, nextV));
     }
     ensureLoop();
   }
@@ -685,7 +792,7 @@ function PanelMotif({
         // the panels' own left padding is widened (see LINE_GUTTER) to
         // keep this clear of the title/tagline text above it.
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: LINE_GUTTER }}>
-          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
+          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical threadPhysics={id === 'leadership'} />
           {!first && (
             <span
               style={{
@@ -704,7 +811,7 @@ function PanelMotif({
         </div>
       ) : (
         <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
-          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} />
+          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} threadPhysics={id === 'leadership'} />
           {!first && (
             <span
               style={{
