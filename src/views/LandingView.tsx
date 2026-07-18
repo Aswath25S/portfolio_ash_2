@@ -381,10 +381,17 @@ const LINE_COLORS: Record<Exclude<ViewId, 'landing'>, string> = {
   reading: '#ff4d79',
 };
 
-// Width of the left-edge gutter the signal line runs through on stacked
-// mobile panels — LandingPanel pads its content past this so text never
-// sits on top of the line.
-const LINE_GUTTER = 26;
+// The vertical (mobile-stacked) gutter is much narrower and taller than the
+// horizontal strip (full panel width, 72px tall) these motifs were designed
+// for — roughly 26px wide by 200+px tall. Without correction, the along-
+// length axis (mapped to the tall dimension) and the thickness axis (mapped
+// to the narrow one) end up stretched by wildly different pixel-per-unit
+// factors, which distorts stroke proportions and (worse) bar dimensions
+// into chunky, near-disconnected-looking blobs instead of a clean line/
+// bars. Scaling the length coordinate — and the viewBox height to match —
+// keeps the two axes' pixel-per-unit ratio close to even, the same way it
+// naturally is on the wide horizontal strip.
+const VERTICAL_LENGTH_SCALE = 3.4;
 
 // Cubic-bezier point evaluator for one Catmull-Rom segment (p1 -> p2, with
 // neighbors p0/p3 shaping the tangents) — used by resampleSmooth below to
@@ -506,7 +513,8 @@ function pointsToPath(points: [number, number][], offsets: Float32Array, vertica
   return points
     .map(([x, y], i) => {
       const thickness = (y + offsets[i]).toFixed(2);
-      return vertical ? `${i === 0 ? 'M' : 'L'}${thickness},${x}` : `${i === 0 ? 'M' : 'L'}${x},${thickness}`;
+      const length = (vertical ? x * VERTICAL_LENGTH_SCALE : x).toFixed(2);
+      return vertical ? `${i === 0 ? 'M' : 'L'}${thickness},${length}` : `${i === 0 ? 'M' : 'L'}${length},${thickness}`;
     })
     .join(' ');
 }
@@ -900,7 +908,7 @@ function ShakyLine({
 
   return (
     <svg
-      viewBox={vertical ? '0 0 40 100' : '0 0 100 40'}
+      viewBox={vertical ? `0 0 40 ${100 * VERTICAL_LENGTH_SCALE}` : '0 0 100 40'}
       preserveAspectRatio="none"
       onMouseMove={handleMove}
       onMouseLeave={() => {
@@ -1063,7 +1071,7 @@ function WildLine({
 
     const zapY = valueAtX(points, zapX);
     const cx = vertical ? zapY : zapX;
-    const cy = vertical ? zapX : zapY;
+    const cy = vertical ? zapX * VERTICAL_LENGTH_SCALE : zapY;
     sparkRefs.current.forEach((el, i) => {
       if (!el) return;
       const ang = (SPARK_ANGLES_DEG[i] * Math.PI) / 180;
@@ -1124,7 +1132,7 @@ function WildLine({
 
   return (
     <svg
-      viewBox={vertical ? '0 0 40 100' : '0 0 100 40'}
+      viewBox={vertical ? `0 0 40 ${100 * VERTICAL_LENGTH_SCALE}` : '0 0 100 40'}
       preserveAspectRatio="none"
       onMouseMove={handleMove}
       onMouseLeave={() => {
@@ -1132,8 +1140,30 @@ function WildLine({
       }}
       style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}
     >
-      <path ref={ghostARef} d={rest} fill="none" stroke="#00e5ff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" opacity={0} vectorEffect="non-scaling-stroke" transform={vertical ? 'translate(0,-1.3)' : 'translate(-1.3,0)'} />
-      <path ref={ghostBRef} d={rest} fill="none" stroke="#ff2e6b" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" opacity={0} vectorEffect="non-scaling-stroke" transform={vertical ? 'translate(0,1.3)' : 'translate(1.3,0)'} />
+      <path
+        ref={ghostARef}
+        d={rest}
+        fill="none"
+        stroke="#00e5ff"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0}
+        vectorEffect="non-scaling-stroke"
+        transform={vertical ? `translate(0,${(-1.3 * VERTICAL_LENGTH_SCALE).toFixed(2)})` : 'translate(-1.3,0)'}
+      />
+      <path
+        ref={ghostBRef}
+        d={rest}
+        fill="none"
+        stroke="#ff2e6b"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0}
+        vectorEffect="non-scaling-stroke"
+        transform={vertical ? `translate(0,${(1.3 * VERTICAL_LENGTH_SCALE).toFixed(2)})` : 'translate(1.3,0)'}
+      />
       <path ref={glowRef} d={rest} fill="none" stroke="#ffffff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" opacity={0} vectorEffect="non-scaling-stroke" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
       <path ref={pathRef} d={rest} fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" opacity={0.62} vectorEffect="non-scaling-stroke" />
       {SPARK_ANGLES_DEG.map((_, i) => (
@@ -1206,8 +1236,12 @@ function waterfallBump(dx: number) {
 function barRect(i: number, extra: number, vertical: boolean) {
   const length = WATERFALL_BASELINE - WATERFALL_LEVELS[i] + extra;
   const across = WATERFALL_X_CENTERS[i] - WATERFALL_BAR_WIDTH / 2;
+  // `across` and the bar's own girth (WATERFALL_BAR_WIDTH) both live on the
+  // along-length axis — in vertical mode that's the SVG's y/height, which
+  // needs the same VERTICAL_LENGTH_SCALE correction as ShakyLine/WildLine's
+  // path coordinates (see its definition) or bars render as squat blobs.
   return vertical
-    ? { x: WATERFALL_BASELINE - length, y: across, width: length, height: WATERFALL_BAR_WIDTH }
+    ? { x: WATERFALL_BASELINE - length, y: across * VERTICAL_LENGTH_SCALE, width: length, height: WATERFALL_BAR_WIDTH * VERTICAL_LENGTH_SCALE }
     : { x: across, y: WATERFALL_BASELINE - length, width: WATERFALL_BAR_WIDTH, height: length };
 }
 
@@ -1287,12 +1321,12 @@ function WaterfallChart({ color, pulseTrigger, pulseDelay, vertical }: { color: 
   }, []);
 
   return (
-    <svg viewBox={vertical ? '0 0 40 100' : '0 0 100 40'} preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}>
+    <svg viewBox={vertical ? `0 0 40 ${100 * VERTICAL_LENGTH_SCALE}` : '0 0 100 40'} preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}>
       <line
         x1={vertical ? WATERFALL_BASELINE : 0}
         y1={vertical ? 0 : WATERFALL_BASELINE}
         x2={vertical ? WATERFALL_BASELINE : 100}
-        y2={vertical ? 100 : WATERFALL_BASELINE}
+        y2={vertical ? 100 * VERTICAL_LENGTH_SCALE : WATERFALL_BASELINE}
         stroke={color}
         strokeOpacity={0.25}
         strokeWidth={1}
@@ -1413,21 +1447,10 @@ function PanelMotif({
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
       {texture}
-      {vertical ? (
-        // Stacked mobile panels run the signal line down a narrow gutter
-        // hugging the left edge instead of through the vertical center —
-        // the panels' own left padding is widened (see LINE_GUTTER) to
-        // keep this clear of the title/tagline text above it.
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: LINE_GUTTER }}>
-          {id === 'consulting' ? (
-            <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
-          ) : id === 'reading' ? (
-            <WildLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
-          ) : (
-            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} pulseAmpScale={id === 'leadership' ? 1.7 : 1} />
-          )}
-        </div>
-      ) : (
+      {!vertical && (
+        // Stacked mobile panels drop this chart/signal-line motif entirely
+        // (see LandingPanel's padding, which no longer reserves a gutter for
+        // it either) — it only renders on the wide horizontal desktop strip.
         <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
           {id === 'consulting' ? (
             <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical={false} />
@@ -1473,7 +1496,7 @@ function LandingPanel({
         background: p.panelBg,
         color: p.panelFg,
         border: `1px solid ${p.panelBorder}`,
-        padding: isMobile ? `22px 20px 22px ${LINE_GUTTER + 10}px` : '28px 26px',
+        padding: isMobile ? '22px 20px' : '28px 26px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
