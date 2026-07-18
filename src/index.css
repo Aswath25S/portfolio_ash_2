@@ -157,6 +157,26 @@ body {
   }
 }
 
+@keyframes waterfallGrowY {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes waterfallGrowX {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 button {
   font: inherit;
 }

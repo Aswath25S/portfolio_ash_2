@@ -823,6 +823,187 @@ function ShakyLine({
   );
 }
 
+// Consulting gets an actual waterfall/bridge chart — the single most
+// recognizable "consulting deck" visual — instead of a line, reusing the
+// same y-levels the old ascending-staircase line traced so it still reads
+// as the same growth trend, just rendered as bars. Bars grow in once on
+// mount, then react to the shared heartbeat (pulseTrigger) the way the
+// other three panels' lines do — a wave sweeps left-to-right and each bar
+// rises then settles back as the wave passes over it, rather than a fixed
+// per-bar animation replaying on every beat. Hovering a bar highlights it
+// like a real chart tooltip.
+// A real up-and-down bridge/waterfall pattern (gain, dip, gain, dip, ...)
+// rather than a monotonic staircase — a strictly-ascending sequence reads
+// as flat/boring at a glance even with varying step sizes, since the eye
+// only registers the overall slope. Bars stay compressed toward the bottom
+// of the 0-40 band so even the shortest one has real presence.
+const WATERFALL_LEVELS = [22, 10, 17, 7, 14, 5, 9];
+const WATERFALL_X_CENTERS = [6, 19, 33, 47, 61, 75, 91];
+// Close to the very edge of the 0-40 viewBox on purpose — taller bars, more
+// of the band actually used — rather than moving the levels themselves.
+const WATERFALL_BASELINE = 39;
+const WATERFALL_BAR_WIDTH = 9;
+// Bumped up from 5 — the ask was for hover to read as more responsive, not
+// just a color change with a token height twitch.
+const HOVER_BOOST = 8;
+
+// Same traveling-wave timing as ShakyLine's pulse (PULSE_SWEEP_MS, waveX
+// sweeping -15 -> 115, LUB_DUB_GAP_MS for the second weaker beat), but the
+// shape is a plain positive bump — a bar's height only ever goes up as the
+// wave arrives and back down as it leaves, never below its resting height,
+// matching "increase and decrease" rather than the signed up/down wobble
+// the line version uses.
+// Widened and roughly doubled in amplitude from the original tuning — at
+// sigma=9/amp=7 the reaction was subtle enough to almost miss; this makes
+// each bar's rise-and-fall an obvious, springy pop as the wave arrives, and
+// wide enough that 2-3 neighboring bars are visibly moving at once, which
+// is what actually reads as a "wave" sweeping across the chart.
+const WATERFALL_BUMP_SIGMA = 13;
+const WATERFALL_BUMP_AMP = 14;
+
+function waterfallBump(dx: number) {
+  return WATERFALL_BUMP_AMP * Math.exp(-(dx * dx) / (2 * WATERFALL_BUMP_SIGMA * WATERFALL_BUMP_SIGMA));
+}
+
+// Single source of truth for a bar's geometry, shared by the imperative
+// per-frame pulse animation and the plain React render — they used to
+// disagree (JSX pinned the bar's *value* end and let it grow past the
+// baseline; the imperative code pinned the baseline and grew the value end
+// outward), which was harmless at rest (both agree when bump=0) but would
+// have snapped a bar to the wrong shape if a React re-render ever landed
+// mid-pulse — exactly what hovering a bar during an active pulse now does.
+// Every bar always grows away from the fixed baseline, in both directions.
+function barRect(i: number, extra: number, vertical: boolean) {
+  const length = WATERFALL_BASELINE - WATERFALL_LEVELS[i] + extra;
+  const across = WATERFALL_X_CENTERS[i] - WATERFALL_BAR_WIDTH / 2;
+  return vertical
+    ? { x: WATERFALL_BASELINE - length, y: across, width: length, height: WATERFALL_BAR_WIDTH }
+    : { x: across, y: WATERFALL_BASELINE - length, width: WATERFALL_BAR_WIDTH, height: length };
+}
+
+function WaterfallChart({ color, pulseTrigger, pulseDelay, vertical }: { color: string; pulseTrigger: number; pulseDelay: number; vertical: boolean }) {
+  const [hoverIdx, setHoverIdxState] = useState<number | null>(null);
+  // Imperative reads (inside tick, running outside React's render cycle)
+  // need the *current* hover target, not whatever it was when that
+  // particular tick() closure happened to be created — a ref side-channel
+  // avoids that staleness.
+  const hoverIdxRef = useRef<number | null>(null);
+  const rectRefs = useRef<(SVGRectElement | null)[]>([]);
+  const bumps = useRef(new Float32Array(WATERFALL_LEVELS.length));
+  const pulses = useRef<{ start: number; amp: number }[]>([]);
+  const rafRef = useRef<number | null>(null);
+  const prevTrigger = useRef(pulseTrigger);
+
+  function setHover(i: number | null) {
+    hoverIdxRef.current = i;
+    setHoverIdxState(i);
+    ensureLoop(); // apply the hover boost immediately even if no pulse is running
+  }
+
+  function ensureLoop() {
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+  }
+
+  function applyBar(i: number) {
+    const el = rectRefs.current[i];
+    if (!el) return;
+    const extra = bumps.current[i] + (hoverIdxRef.current === i ? HOVER_BOOST : 0);
+    const r = barRect(i, extra, vertical);
+    el.setAttribute('x', String(r.x));
+    el.setAttribute('y', String(r.y));
+    el.setAttribute('width', String(r.width));
+    el.setAttribute('height', String(r.height));
+  }
+
+  function tick() {
+    const now = performance.now();
+    pulses.current = pulses.current.filter((p) => now - p.start <= PULSE_SWEEP_MS);
+    let stillMoving = false;
+    for (let i = 0; i < WATERFALL_LEVELS.length; i++) {
+      let bump = 0;
+      for (const p of pulses.current) {
+        const waveX = -15 + 130 * ((now - p.start) / PULSE_SWEEP_MS);
+        bump += p.amp * waterfallBump(WATERFALL_X_CENTERS[i] - waveX);
+      }
+      bumps.current[i] = bump;
+      if (bump > 0.05) stillMoving = true;
+      applyBar(i);
+    }
+    rafRef.current = stillMoving || pulses.current.length > 0 ? requestAnimationFrame(tick) : null;
+  }
+
+  useEffect(() => {
+    if (pulseTrigger === prevTrigger.current) return;
+    prevTrigger.current = pulseTrigger;
+    const lub = window.setTimeout(() => {
+      pulses.current.push({ start: performance.now(), amp: 1 });
+      ensureLoop();
+    }, pulseDelay);
+    const dub = window.setTimeout(() => {
+      pulses.current.push({ start: performance.now(), amp: 0.6 });
+      ensureLoop();
+    }, pulseDelay + LUB_DUB_GAP_MS);
+    return () => {
+      window.clearTimeout(lub);
+      window.clearTimeout(dub);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pulseTrigger]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  return (
+    <svg viewBox={vertical ? '0 0 40 100' : '0 0 100 40'} preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}>
+      <line
+        x1={vertical ? WATERFALL_BASELINE : 0}
+        y1={vertical ? 0 : WATERFALL_BASELINE}
+        x2={vertical ? WATERFALL_BASELINE : 100}
+        y2={vertical ? 100 : WATERFALL_BASELINE}
+        stroke={color}
+        strokeOpacity={0.25}
+        strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
+      />
+      {WATERFALL_LEVELS.map((_, i) => {
+        const hovered = hoverIdx === i;
+        const rectProps = barRect(i, bumps.current[i] + (hovered ? HOVER_BOOST : 0), vertical);
+        return (
+          <rect
+            ref={(el) => {
+              rectRefs.current[i] = el;
+            }}
+            key={i}
+            {...rectProps}
+            fill={color}
+            opacity={hovered ? 0.85 : 0.4}
+            rx={1}
+            style={{
+              transformBox: 'fill-box',
+              transformOrigin: vertical ? 'left' : 'bottom',
+              animation: `${vertical ? 'waterfallGrowX' : 'waterfallGrowY'} .5s cubic-bezier(.2,.8,.3,1.1) both`,
+              animationDelay: `${i * 70}ms`,
+              transition:
+                'opacity .12s ease, x .14s cubic-bezier(.34,1.56,.64,1), y .14s cubic-bezier(.34,1.56,.64,1), width .14s cubic-bezier(.34,1.56,.64,1), height .14s cubic-bezier(.34,1.56,.64,1)',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => {
+              // Guards against a stale clear: if the pointer already moved
+              // on to a different bar by the time this fires, don't wipe
+              // out that bar's hover state.
+              if (hoverIdxRef.current === i) setHover(null);
+            }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 function PanelMotif({
   id,
   fg,
@@ -901,6 +1082,10 @@ function PanelMotif({
   // pluck can push one such pair's two points apart instead of together,
   // shearing the vertical segment. Keep them moving as one block.
   const coherentPull = id === 'tech' || id === 'consulting';
+  // The handoff dot marks where the previous panel's *line* would hand off
+  // to this one — Consulting doesn't have a line to hand off anymore, so
+  // the dot has nothing to sit on and just floats oddly over the bars.
+  const showDot = !first && id !== 'consulting';
 
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
@@ -911,8 +1096,12 @@ function PanelMotif({
         // the panels' own left padding is widened (see LINE_GUTTER) to
         // keep this clear of the title/tagline text above it.
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: LINE_GUTTER }}>
-          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
-          {!first && (
+          {id === 'consulting' ? (
+            <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
+          ) : (
+            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
+          )}
+          {showDot && (
             <span
               style={{
                 position: 'absolute',
@@ -930,8 +1119,12 @@ function PanelMotif({
         </div>
       ) : (
         <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
-          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
-          {!first && (
+          {id === 'consulting' ? (
+            <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical={false} />
+          ) : (
+            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
+          )}
+          {showDot && (
             <span
               style={{
                 position: 'absolute',
