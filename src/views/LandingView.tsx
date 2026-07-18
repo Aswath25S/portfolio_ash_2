@@ -450,9 +450,12 @@ const LINE_POINTS: Record<Exclude<ViewId, 'landing'>, [number, number][]> = {
     [40, 12], [54, 12], [54, 10], [68, 10], [68, 9], [82, 9], [82, 8], [100, 8],
   ],
   leadership: resampleSmooth(LEADERSHIP_ANCHORS, 8),
+  // Irregular on purpose — varying both peak height and horizontal spacing
+  // reads as a loose, hand-drawn "vague zigzag" rather than a mechanically
+  // even sawtooth.
   reading: [
-    [0, 20], [6, 14], [12, 24], [18, 16], [24, 26], [30, 18], [36, 22], [42, 14], [48, 24],
-    [54, 17], [60, 23], [66, 15], [72, 21], [78, 13], [84, 23], [90, 17], [96, 20], [100, 19],
+    [0, 19], [5, 27], [10, 14], [15, 22], [19, 11], [27, 25], [33, 16], [38, 9],
+    [45, 23], [50, 15], [58, 28], [63, 12], [71, 21], [76, 10], [83, 25], [89, 15], [95, 21], [100, 18],
   ],
 };
 
@@ -921,6 +924,235 @@ function ShakyLine({
   );
 }
 
+// Reading/"Other Stuff" is the wildcard category, so its line gets a
+// wildcard treatment: instead of one spring tuned a certain way, it cycles
+// through a handful of genuinely different animation *mechanisms* — not
+// just different constants on the same physics — each borrowed from a
+// different corner of pop culture/art. One touch might crackle like comic-
+// book lightning, the next glitch like a scratched record, the next ripple
+// like a stone dropped in ink. Touching the line again (or catching the
+// next shared heartbeat) advances to the next one in the cycle, so
+// scrubbing across it turns up a different personality each time rather
+// than the same reaction on repeat.
+type WildMode = 'zap' | 'scratch' | 'ripple';
+const WILD_MODES: WildMode[] = ['zap', 'scratch', 'ripple'];
+const WILD_DURATION_MS: Record<WildMode, number> = { zap: 420, scratch: 380, ripple: 1300 };
+// Roughly "up and outward" in screen terms — comic panels draw impact
+// lines radiating from the strike point, never straight down.
+const SPARK_ANGLES_DEG = [-150, -115, -65, -30];
+
+// "Zap" — comic-book/superhero lightning (Flash's bolt, a scar crackling
+// awake): a tight, jagged, fast-decaying crackle right at the touch point.
+// Stepped rather than eased so it reads as electric, not springy.
+const ZAP_SIGMA = 7;
+const ZAP_AMP = 9;
+const ZAP_STEPS = [0, 1, -0.7, 0.85, -0.5, 0.3, -0.15, 0];
+function zapOffset(dx: number, ageMs: number, durationMs: number) {
+  const envelope = Math.exp(-(dx * dx) / (2 * ZAP_SIGMA * ZAP_SIGMA));
+  const frac = Math.min(0.999, Math.max(0, ageMs / durationMs));
+  const step = ZAP_STEPS[Math.floor(frac * (ZAP_STEPS.length - 1))];
+  return ZAP_AMP * envelope * step * (1 - frac);
+}
+
+// "Scratch" — turntablism/VHS glitch: a fast, narrow stutter in the
+// geometry itself (distinct from zap's single jagged crackle), paired in
+// the renderer below with a chromatic-aberration color split that's this
+// mode's real signature.
+const SCRATCH_SIGMA = 9;
+const SCRATCH_AMP = 4;
+const SCRATCH_FREQ = 55;
+function scratchOffset(dx: number, ageMs: number, durationMs: number) {
+  const envelope = Math.exp(-(dx * dx) / (2 * SCRATCH_SIGMA * SCRATCH_SIGMA));
+  const decay = Math.max(0, 1 - ageMs / durationMs);
+  return SCRATCH_AMP * envelope * decay * Math.sin((ageMs / 1000) * SCRATCH_FREQ);
+}
+
+// "Ripple" — a stone dropped in ink (Hokusai's wave): a ring expands
+// outward from the touch point, oscillating and losing amplitude as it
+// travels. The most literal "wave" of the three, and the slowest.
+const RIPPLE_AMP = 8;
+const RIPPLE_SPEED = 70; // viewBox units/sec the ring expands
+const RIPPLE_RING_SIGMA = 8;
+const RIPPLE_WAVELENGTH = 11;
+function rippleOffset(dx: number, ageMs: number, durationMs: number) {
+  const radius = RIPPLE_SPEED * (ageMs / 1000);
+  const ringDist = Math.abs(dx) - radius;
+  const envelope = Math.exp(-(ringDist * ringDist) / (2 * RIPPLE_RING_SIGMA * RIPPLE_RING_SIGMA));
+  const decay = Math.max(0, 1 - ageMs / durationMs);
+  return RIPPLE_AMP * envelope * decay * Math.sin((ringDist / RIPPLE_WAVELENGTH) * Math.PI * 2);
+}
+
+function WildLine({
+  points,
+  color,
+  pulseTrigger,
+  pulseDelay,
+  vertical = false,
+}: {
+  points: [number, number][];
+  color: string;
+  pulseTrigger: number;
+  pulseDelay: number;
+  vertical?: boolean;
+}) {
+  const pathRef = useRef<SVGPathElement>(null);
+  const glowRef = useRef<SVGPathElement>(null);
+  const ghostARef = useRef<SVGPathElement>(null);
+  const ghostBRef = useRef<SVGPathElement>(null);
+  const sparkRefs = useRef<(SVGLineElement | null)[]>([]);
+  const rafRef = useRef<number | null>(null);
+  const bursts = useRef<{ mode: WildMode; start: number; x: number }[]>([]);
+  const modeCursor = useRef(0);
+  const lastTriggerX = useRef<number | null>(null);
+  const prevPulseTrigger = useRef(pulseTrigger);
+  const rest = useMemo(() => pointsToPath(points, new Float32Array(points.length), vertical), [points, vertical]);
+
+  function ensureLoop() {
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+  }
+
+  function triggerBurst(x: number) {
+    const mode = WILD_MODES[modeCursor.current % WILD_MODES.length];
+    modeCursor.current++;
+    bursts.current.push({ mode, start: performance.now(), x });
+    ensureLoop();
+  }
+
+  function tick() {
+    const now = performance.now();
+    bursts.current = bursts.current.filter((b) => now - b.start <= WILD_DURATION_MS[b.mode]);
+
+    const offsets = new Float32Array(points.length);
+    let zapGlow = 0;
+    let zapX = 0;
+    let scratchIntensity = 0;
+
+    for (const b of bursts.current) {
+      const age = now - b.start;
+      const duration = WILD_DURATION_MS[b.mode];
+      if (b.mode === 'zap') {
+        for (let i = 0; i < points.length; i++) offsets[i] += zapOffset(points[i][0] - b.x, age, duration);
+        const decay = 1 - age / duration;
+        if (decay > zapGlow) {
+          zapGlow = decay;
+          zapX = b.x;
+        }
+      } else if (b.mode === 'ripple') {
+        for (let i = 0; i < points.length; i++) offsets[i] += rippleOffset(points[i][0] - b.x, age, duration);
+      } else {
+        for (let i = 0; i < points.length; i++) offsets[i] += scratchOffset(points[i][0] - b.x, age, duration);
+        scratchIntensity = Math.max(scratchIntensity, 1 - age / duration);
+      }
+    }
+
+    const d = pointsToPath(points, offsets, vertical);
+    pathRef.current?.setAttribute('d', d);
+
+    if (glowRef.current) {
+      glowRef.current.setAttribute('d', d);
+      glowRef.current.style.opacity = String(zapGlow * 0.85);
+    }
+    if (ghostARef.current) {
+      ghostARef.current.setAttribute('d', d);
+      ghostARef.current.style.opacity = String(scratchIntensity * 0.55);
+    }
+    if (ghostBRef.current) {
+      ghostBRef.current.setAttribute('d', d);
+      ghostBRef.current.style.opacity = String(scratchIntensity * 0.55);
+    }
+
+    const zapY = valueAtX(points, zapX);
+    const cx = vertical ? zapY : zapX;
+    const cy = vertical ? zapX : zapY;
+    sparkRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const ang = (SPARK_ANGLES_DEG[i] * Math.PI) / 180;
+      const len = 2.5 + zapGlow * 4;
+      el.setAttribute('x1', String(cx + Math.cos(ang) * 2));
+      el.setAttribute('y1', String(cy + Math.sin(ang) * 2));
+      el.setAttribute('x2', String(cx + Math.cos(ang) * (2 + len)));
+      el.setAttribute('y2', String(cy + Math.sin(ang) * (2 + len)));
+      el.style.opacity = String(zapGlow * 0.95);
+    });
+
+    if (bursts.current.length > 0) {
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      rafRef.current = null;
+      pathRef.current?.setAttribute('d', rest);
+      if (glowRef.current) glowRef.current.style.opacity = '0';
+      if (ghostARef.current) ghostARef.current.style.opacity = '0';
+      if (ghostBRef.current) ghostBRef.current.style.opacity = '0';
+      sparkRefs.current.forEach((el) => el && (el.style.opacity = '0'));
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pulseTrigger === prevPulseTrigger.current) return;
+    prevPulseTrigger.current = pulseTrigger;
+    const lub = window.setTimeout(() => triggerBurst(0), pulseDelay);
+    const dub = window.setTimeout(() => triggerBurst(0), pulseDelay + LUB_DUB_GAP_MS);
+    return () => {
+      window.clearTimeout(lub);
+      window.clearTimeout(dub);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pulseTrigger]);
+
+  function handleMove(e: ReactMouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const localX = vertical ? ((e.clientY - rect.top) / rect.height) * 100 : ((e.clientX - rect.left) / rect.width) * 100;
+    const localY = vertical ? ((e.clientX - rect.left) / rect.width) * 40 : ((e.clientY - rect.top) / rect.height) * 40;
+    if (localX < 0 || localX > 100) return;
+    const dyFromLine = localY - valueAtX(points, localX);
+    if (Math.abs(dyFromLine) > 7) return;
+    // Re-triggers as the cursor travels along the line (so scrubbing across
+    // it turns up several different modes in one sweep), but not on every
+    // single pixel of a near-stationary cursor.
+    if (lastTriggerX.current == null || Math.abs(localX - lastTriggerX.current) > 9) {
+      lastTriggerX.current = localX;
+      triggerBurst(localX);
+    }
+  }
+
+  return (
+    <svg
+      viewBox={vertical ? '0 0 40 100' : '0 0 100 40'}
+      preserveAspectRatio="none"
+      onMouseMove={handleMove}
+      onMouseLeave={() => {
+        lastTriggerX.current = null;
+      }}
+      style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}
+    >
+      <path ref={ghostARef} d={rest} fill="none" stroke="#00e5ff" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" opacity={0} vectorEffect="non-scaling-stroke" transform={vertical ? 'translate(0,-1.3)' : 'translate(-1.3,0)'} />
+      <path ref={ghostBRef} d={rest} fill="none" stroke="#ff2e6b" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" opacity={0} vectorEffect="non-scaling-stroke" transform={vertical ? 'translate(0,1.3)' : 'translate(1.3,0)'} />
+      <path ref={glowRef} d={rest} fill="none" stroke="#ffffff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" opacity={0} vectorEffect="non-scaling-stroke" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
+      <path ref={pathRef} d={rest} fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" opacity={0.62} vectorEffect="non-scaling-stroke" />
+      {SPARK_ANGLES_DEG.map((_, i) => (
+        <line
+          key={i}
+          ref={(el) => {
+            sparkRefs.current[i] = el;
+          }}
+          stroke={color}
+          strokeWidth={1.3}
+          strokeLinecap="round"
+          opacity={0}
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
+    </svg>
+  );
+}
+
 // Consulting gets an actual waterfall/bridge chart — the single most
 // recognizable "consulting deck" visual — instead of a line, reusing the
 // same y-levels the old ascending-staircase line traced so it still reads
@@ -1189,6 +1421,8 @@ function PanelMotif({
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: LINE_GUTTER }}>
           {id === 'consulting' ? (
             <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
+          ) : id === 'reading' ? (
+            <WildLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
           ) : (
             <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} pulseAmpScale={id === 'leadership' ? 1.7 : 1} />
           )}
@@ -1197,6 +1431,8 @@ function PanelMotif({
         <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
           {id === 'consulting' ? (
             <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical={false} />
+          ) : id === 'reading' ? (
+            <WildLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} />
           ) : (
             <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} pulseAmpScale={id === 'leadership' ? 1.7 : 1} />
           )}
