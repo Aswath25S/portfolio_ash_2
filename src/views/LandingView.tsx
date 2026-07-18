@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import type { CategoryMeta, Mode, Theme, ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
 import { useIsMobile } from '../hooks/useMediaQuery';
@@ -479,10 +479,6 @@ const LINE_GROUPS: Partial<Record<Exclude<ViewId, 'landing'>, number[]>> = {
   consulting: computeGroupIds(LINE_POINTS.consulting),
 };
 
-// Where each line starts vertically (0-40 viewBox units) — matches the
-// previous panel's end point so the boundary dot sits exactly on the line.
-const LINE_START_Y: Record<Exclude<ViewId, 'landing'>, number> = { tech: 20, consulting: 20, leadership: 8, reading: 20 };
-
 const PANEL_TAGS: Record<Exclude<ViewId, 'landing'>, string> = {
   tech: 'PID 4102',
   consulting: 'Q3 FY26',
@@ -536,22 +532,41 @@ const SPRING_DAMPING = 6;
 // Tech/Consulting move as rigid grouped blocks (see groupIds/coherentPull)
 // rather than an independent wobble per point, so they don't need the taut,
 // snap-back-instantly spring above to avoid looking chaotic — that made
-// their travel feel clipped/restrictive. Softer stiffness and lighter
-// damping than the default spring gives more give and a slower, looser
-// settle, while staying uncoupled (no neighbor tension) so segments still
-// move as flat rigid blocks, not a wobbling thread like Leadership.
+// their travel feel clipped/restrictive. Softer stiffness than the default
+// spring gives more give.
+// Damping is tuned closer to critical (zeta ~0.85) rather than the loose,
+// bouncy value this used to have — that lower damping was originally tuned
+// for a one-off pluck's ripple-and-settle, but now that hover only ever
+// drives a *held target* (see HOLD_AMPLITUDE below) rather than a
+// transient kick, the same underdamping meant every time the target
+// appeared or moved it rang for the better part of a second before
+// settling — reading as the hover effect "fading" even while the cursor
+// hadn't moved. A near-critical settle arrives cleanly instead.
 const COHERENT_STIFFNESS = 42;
-const COHERENT_DAMPING = 4.2;
+const COHERENT_DAMPING = 11;
 
 // Leadership's "loose thread" physics: each point is also pulled toward its
 // neighbors' offsets (not just back toward its own rest position), so a
 // disturbance propagates down the line instead of every point oscillating
-// in place, independently, at the same frequency. Softer self-restoring
-// force + lighter damping than the spring above means it takes longer, and
-// wobbles more, to settle — slack instead of taut.
+// in place, independently, at the same frequency — this coupling is what
+// still gives Leadership a "slack" character even at the higher damping
+// below (that damping only governs how fast each point settles toward its
+// own held target, not the ripple between points). See the comment on
+// COHERENT_DAMPING above for why this was raised from the original,
+// looser-but-ringy value.
 const THREAD_STIFFNESS = 34;
-const THREAD_DAMPING = 3.2;
+const THREAD_DAMPING = 10;
 const THREAD_COUPLING = 55;
+
+// A hovering cursor holds Leadership/Tech displaced for as long as it stays
+// nearby, rather than a one-off kick that springs back on its own timeline
+// regardless of whether the cursor is still there — recomputed every frame
+// from the live cursor position, so the effect tracks where the cursor
+// *is*, not how long ago it last moved. HOLD_SIGMA_Y only matters for
+// grouped lines (Tech), giving the segment actually nearest the cursor a
+// much stronger hold than a segment that merely shares a nearby x.
+const HOLD_AMPLITUDE = 11;
+const HOLD_SIGMA_Y = 10;
 
 // Periodic traveling pulse — a sharp upward spike with a smaller rebound
 // dip right behind it, like an EKG blip — sweeps left-to-right across each
@@ -573,17 +588,25 @@ function pulseShapeOffset(dx: number) {
   return -spike + rebound; // negative = visually up (SVG y grows down), positive = the dip right after
 }
 
-// Tech/Consulting's grouped lines get this instead: an odd (antisymmetric)
-// bump — as the wave passes a fixed point it swings one way, crosses zero
-// exactly under the wave center, then swings the *other* way by the same
-// amount, before settling. Peaks at dx = ±SYM_PULSE_SIGMA. The EKG shape
-// above peaks around -6.7 (up) but only +1.5 (down) — fine for
-// Leadership's organic heartbeat, but it meant Tech/Consulting's automatic
-// pulse (which fires on a timer regardless of any interaction) was
-// visibly, systematically biased upward rather than moving up and down by
-// equal amounts.
+// Tech's grouped lines (and now Leadership too, see threadPhysics below)
+// get this instead of the EKG shape above: an odd (antisymmetric) bump —
+// as the wave passes a fixed point it swings one way, crosses zero exactly
+// under the wave center, then swings the *other* way by the same amount,
+// before settling. Peaks at dx = ±SYM_PULSE_SIGMA. The EKG shape peaks
+// around -6.7 (up) but only +1.5 (down) — a real, systematic directional
+// bias, not just visual noise — which reads as "gravity" the moment it's
+// on screen at the same time as a symmetric hover push. Reading keeps the
+// original EKG shape; its independent buzzy shake was never part of this
+// complaint.
 const SYM_PULSE_AMP = 13;
-const SYM_PULSE_SIGMA = 4;
+// Widened from 4 — a narrow sigma against Tech's ~14-20 unit group spacing
+// meant each group barely registered the wave until it was almost directly
+// overhead, then snapped through its whole swing in a handful of frames,
+// reading as a series of erratic little jolts rather than one smooth wave
+// rolling across the line. The peak amplitude of the derivative-of-Gaussian
+// shape below only depends on SYM_PULSE_AMP, not sigma, so widening this
+// only stretches the transition out in time/space — it doesn't blunt it.
+const SYM_PULSE_SIGMA = 9;
 
 function symmetricPulseOffset(dx: number) {
   return SYM_PULSE_AMP * (dx / SYM_PULSE_SIGMA) * Math.exp(-(dx * dx) / (2 * SYM_PULSE_SIGMA * SYM_PULSE_SIGMA));
@@ -598,12 +621,18 @@ function ShakyLine({
   coherentPull = false,
   groupIds,
   threadPhysics = false,
+  pulseAmpScale = 1,
 }: {
   points: [number, number][];
   color: string;
   pulseTrigger: number;
   pulseDelay: number;
   vertical?: boolean;
+  // Scales the automatic heartbeat sweep's amplitude for this line only —
+  // Leadership wants a bigger wave than Reading, but both share whichever
+  // shape function they end up using, so this multiplies rather than
+  // forking it.
+  pulseAmpScale?: number;
   // Reading's pluck alternates sign point-to-point, which reads as a
   // buzz/shake — fitting for its jittery scribble identity, but on Tech's
   // step-wave and Consulting's staircase (both built from duplicate-x point
@@ -634,8 +663,37 @@ function ShakyLine({
   const velocities = useRef(new Float32Array(points.length));
   const rafRef = useRef<number | null>(null);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+  // Current cursor position, kept live while it's within holding range —
+  // read every tick to recompute the hold target, and cleared (null) the
+  // moment the cursor leaves the SVG or drifts out of range so the line is
+  // free to spring back. Only meaningful for threadPhysics/coherentPull
+  // lines; Reading's independent shake doesn't use it.
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const pulses = useRef<{ start: number; amp: number }[]>([]);
   const prevTrigger = useRef(pulseTrigger);
+  // Same reach used for both the transient pluck impulse and the
+  // continuous hold target, so "how far the hold extends" matches "how far
+  // a kick reaches" — one mental model instead of two different radii.
+  const sigma = threadPhysics ? 5 : 12;
+  // The automatic sweep treats each group as sitting at one fixed x (its
+  // members' average) rather than re-deriving "whichever member is nearest
+  // the wave right now" every frame — that nearest-member logic flips which
+  // point is "in charge" partway across the group, putting a kink in an
+  // otherwise smooth function of time and reading as a jolt.
+  const groupCenters = useMemo(() => {
+    if (!groupIds) return null;
+    const numGroups = groupIds[groupIds.length - 1] + 1;
+    const sums = new Float32Array(numGroups);
+    const counts = new Float32Array(numGroups);
+    for (let i = 0; i < points.length; i++) {
+      sums[groupIds[i]] += points[i][0];
+      counts[groupIds[i]]++;
+    }
+    const centers = new Float32Array(numGroups);
+    for (let g = 0; g < numGroups; g++) centers[g] = sums[g] / counts[g];
+    return centers;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIds]);
 
   useEffect(() => {
     return () => {
@@ -647,9 +705,44 @@ function ShakyLine({
     if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
   }
 
+  // Recomputed fresh every frame from the live pointer position (not from
+  // whatever happened at the last mousemove event) so a cursor that's
+  // stopped moving but is still sitting near the line keeps holding it,
+  // instead of the spring reading "no recent impulse" and relaxing away.
+  function computeHoldTargets(): Float32Array | null {
+    const p = pointerRef.current;
+    if (!p || !(threadPhysics || coherentPull)) return null;
+    const dyFromLine = p.y - valueAtX(points, p.x);
+    if (!groupIds && Math.abs(dyFromLine) > 7) return null; // same close-to-stroke gate handleMove uses
+    const sign = -(Math.sign(dyFromLine) || 1); // repel, same convention as the pluck impulse
+    const target = new Float32Array(points.length);
+    if (groupIds) {
+      const numGroups = groupIds[groupIds.length - 1] + 1;
+      const groupWeight = new Float32Array(numGroups);
+      for (let i = 0; i < points.length; i++) {
+        const dx = points[i][0] - p.x;
+        const dy = points[i][1] - p.y;
+        const wx = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+        const wy = Math.exp(-(dy * dy) / (2 * HOLD_SIGMA_Y * HOLD_SIGMA_Y));
+        const w = wx * wy;
+        const g = groupIds[i];
+        if (w > groupWeight[g]) groupWeight[g] = w;
+      }
+      for (let i = 0; i < points.length; i++) target[i] = groupWeight[groupIds[i]] * HOLD_AMPLITUDE * sign;
+    } else {
+      for (let i = 0; i < points.length; i++) {
+        const dx = points[i][0] - p.x;
+        const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+        target[i] = w * HOLD_AMPLITUDE * sign;
+      }
+    }
+    return target;
+  }
+
   function tick() {
     const dt = 1 / 60;
     let energy = 0;
+    const holdTargets = computeHoldTargets();
     // Neighbor coupling reads last frame's offsets (a full snapshot) rather
     // than the array being mutated in this same pass — otherwise point i's
     // update would see point i-1's brand-new value but point i+1's stale
@@ -658,14 +751,15 @@ function ShakyLine({
     for (let i = 0; i < points.length; i++) {
       const o = offsets.current[i];
       const v = velocities.current[i];
+      const target = holdTargets ? holdTargets[i] : 0;
       let accel: number;
       if (prevOffsets) {
         const left = i > 0 ? prevOffsets[i - 1] : o;
         const right = i < points.length - 1 ? prevOffsets[i + 1] : o;
         const tension = (left + right - 2 * o) * THREAD_COUPLING;
-        accel = -THREAD_STIFFNESS * o - THREAD_DAMPING * v + tension;
+        accel = -THREAD_STIFFNESS * (o - target) - THREAD_DAMPING * v + tension;
       } else if (coherentPull) {
-        accel = -COHERENT_STIFFNESS * o - COHERENT_DAMPING * v;
+        accel = -COHERENT_STIFFNESS * (o - target) - COHERENT_DAMPING * v;
       } else {
         accel = -SPRING_STIFFNESS * o - SPRING_DAMPING * v;
       }
@@ -685,26 +779,30 @@ function ShakyLine({
     const combined = new Float32Array(points.length);
     for (const p of pulses.current) {
       const waveX = -15 + 130 * ((now - p.start) / PULSE_SWEEP_MS);
-      if (groupIds) {
+      if (groupIds && groupCenters) {
         // Same reasoning as the pluck impulse above: the automatic sweep
-        // computes its offset from distance-to-waveX per point, so without
-        // this a horizontal segment's two ends would take different
-        // offsets as the pulse passes and briefly tilt mid-sweep. Use
-        // whichever member of the group is nearest the wave for the whole
-        // group's offset.
-        const numGroups = groupIds[groupIds.length - 1] + 1;
-        const groupDx = new Float32Array(numGroups).fill(Infinity);
+        // needs one offset per whole group, not one per point, or a
+        // horizontal segment's two ends would take different offsets as
+        // the pulse passes and briefly tilt mid-sweep. Distance is to the
+        // group's fixed center (not "whichever member is nearest right
+        // now") so the offset varies smoothly as the wave crosses it,
+        // instead of kinking where the nearest member switches.
         for (let i = 0; i < points.length; i++) {
-          const dx = points[i][0] - waveX;
-          const g = groupIds[i];
-          if (Math.abs(dx) < Math.abs(groupDx[g])) groupDx[g] = dx;
+          const dx = groupCenters[groupIds[i]] - waveX;
+          combined[i] += p.amp * symmetricPulseOffset(dx);
         }
+      } else if (threadPhysics) {
+        // Leadership also gets the symmetric shape now, not the lopsided
+        // EKG one below — a push/pull that's stronger one direction than
+        // the other reads as a directional bias ("gravity") the moment it's
+        // visible at the same time as a hover hold, even though the two
+        // systems are otherwise independent.
         for (let i = 0; i < points.length; i++) {
-          combined[i] += p.amp * symmetricPulseOffset(groupDx[groupIds[i]]);
+          combined[i] += p.amp * pulseAmpScale * symmetricPulseOffset(points[i][0] - waveX);
         }
       } else {
         for (let i = 0; i < points.length; i++) {
-          combined[i] += p.amp * pulseShapeOffset(points[i][0] - waveX);
+          combined[i] += p.amp * pulseAmpScale * pulseShapeOffset(points[i][0] - waveX);
         }
       }
     }
@@ -749,7 +847,11 @@ function ShakyLine({
     const localY = vertical ? ((e.clientX - rect.left) / rect.width) * 40 : ((e.clientY - rect.top) / rect.height) * 40;
     const last = lastPos.current;
     lastPos.current = { x: localX, y: localY };
-    if (localX < 0 || localX > 100) return;
+    if (localX < 0 || localX > 100) {
+      pointerRef.current = null; // out of bounds — release any active hold
+      ensureLoop();
+      return;
+    }
     const dyFromLine = localY - valueAtX(points, localX);
     // Grouped lines (Tech/Consulting) span a wide Y range across their
     // different segments (Tech runs from y=8 to y=32) — gating on distance
@@ -759,41 +861,33 @@ function ShakyLine({
     // unresponsive no matter how much you waved at them. Grouped lines
     // react anywhere in the band instead; direction still comes from which
     // side of the (still-computed) line height the cursor is on.
-    if (!groupIds && Math.abs(dyFromLine) > 7) return; // only react near the actual stroke
+    if (!groupIds && Math.abs(dyFromLine) > 7) {
+      pointerRef.current = null; // too far from the stroke to hold
+      ensureLoop();
+      return;
+    }
+    pointerRef.current = { x: localX, y: localY };
 
-    const speed = last ? Math.min(Math.hypot(localX - last.x, localY - last.y) * 8, 50) : 14;
-    const impulse = 10 + speed * 0.9;
-    // Thread mode keeps the kick tight around the cursor and lets neighbor
-    // coupling carry it outward over subsequent frames — a wide sigma here
-    // would shove a big swath of the (now densely-sampled) curve the same
-    // direction in one shot, and with the softer damping "loose" wants,
-    // that much simultaneous energy can fling the line well past the
-    // visible band before it has time to dissipate.
-    const sigma = threadPhysics ? 5 : 12;
-    const coherentSign = Math.sign(dyFromLine) || 1;
-    const VELOCITY_CAP = 60;
-    if (groupIds) {
-      // One shared weight per group — whichever point in the group sits
-      // closest to the cursor wins — so both ends of a horizontal segment
-      // receive an identical impulse and stay level as they move.
-      const numGroups = groupIds[groupIds.length - 1] + 1;
-      const groupWeight = new Float32Array(numGroups);
+    // Leadership/Tech no longer get a discrete velocity "kick" here — that
+    // was a second, independent source of motion with its own decay
+    // timeline layered on top of the position-based hold below, so even
+    // with the cursor sitting dead still, the kick's own decay made the
+    // effect visibly recede over the first second or so before settling
+    // onto the (smaller) steady hold — reading as "wearing off with time"
+    // even though the hold itself never moved. Now the *only* thing driving
+    // these two lines is computeHoldTargets, recomputed fresh every frame
+    // straight from pointerRef — pure function of current position, so a
+    // fixed cursor gives a fixed target and the spring has nothing left to
+    // decay away from once it arrives. Reading keeps its buzzy alternating
+    // kick untouched; that's a deliberate one-off shake, not a hold.
+    if (!threadPhysics && !coherentPull) {
+      const speed = last ? Math.min(Math.hypot(localX - last.x, localY - last.y) * 8, 50) : 14;
+      const impulse = 10 + speed * 0.9;
+      const VELOCITY_CAP = 60;
       for (let i = 0; i < points.length; i++) {
         const dx = points[i][0] - localX;
         const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
-        const g = groupIds[i];
-        if (w > groupWeight[g]) groupWeight[g] = w;
-      }
-      for (let i = 0; i < points.length; i++) {
-        const w = groupWeight[groupIds[i]];
-        const nextV = velocities.current[i] + w * impulse * coherentSign;
-        velocities.current[i] = Math.max(-VELOCITY_CAP, Math.min(VELOCITY_CAP, nextV));
-      }
-    } else {
-      for (let i = 0; i < points.length; i++) {
-        const dx = points[i][0] - localX;
-        const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
-        const sign = threadPhysics || coherentPull ? coherentSign : i % 2 === 0 ? 1 : -1;
+        const sign = i % 2 === 0 ? 1 : -1;
         const nextV = velocities.current[i] + w * impulse * sign;
         velocities.current[i] = Math.max(-VELOCITY_CAP, Math.min(VELOCITY_CAP, nextV));
       }
@@ -806,6 +900,10 @@ function ShakyLine({
       viewBox={vertical ? '0 0 40 100' : '0 0 100 40'}
       preserveAspectRatio="none"
       onMouseMove={handleMove}
+      onMouseLeave={() => {
+        pointerRef.current = null;
+        ensureLoop();
+      }}
       style={{ width: '100%', height: '100%', overflow: 'visible', display: 'block' }}
     >
       <path
@@ -1007,14 +1105,12 @@ function WaterfallChart({ color, pulseTrigger, pulseDelay, vertical }: { color: 
 function PanelMotif({
   id,
   fg,
-  first,
   pulseTrigger,
   pulseDelay,
   vertical = false,
 }: {
   id: Exclude<ViewId, 'landing'>;
   fg: string;
-  first: boolean;
   pulseTrigger: number;
   pulseDelay: number;
   vertical?: boolean;
@@ -1076,16 +1172,11 @@ function PanelMotif({
   }
 
   const lineColor = LINE_COLORS[id];
-  const startY = LINE_START_Y[id];
   // Tech's step-wave and Consulting's staircase are built from duplicate-x
   // point pairs faking right-angle jumps — the default alternating-sign
   // pluck can push one such pair's two points apart instead of together,
   // shearing the vertical segment. Keep them moving as one block.
   const coherentPull = id === 'tech' || id === 'consulting';
-  // The handoff dot marks where the previous panel's *line* would hand off
-  // to this one — Consulting doesn't have a line to hand off anymore, so
-  // the dot has nothing to sit on and just floats oddly over the bars.
-  const showDot = !first && id !== 'consulting';
 
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
@@ -1099,22 +1190,7 @@ function PanelMotif({
           {id === 'consulting' ? (
             <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical />
           ) : (
-            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
-          )}
-          {showDot && (
-            <span
-              style={{
-                position: 'absolute',
-                top: -3,
-                left: `${(startY / 40) * 100}%`,
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                background: lineColor,
-                transform: 'translateX(-50%)',
-                boxShadow: `0 0 8px ${lineColor}`,
-              }}
-            />
+            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} pulseAmpScale={id === 'leadership' ? 1.7 : 1} />
           )}
         </div>
       ) : (
@@ -1122,22 +1198,7 @@ function PanelMotif({
           {id === 'consulting' ? (
             <WaterfallChart color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical={false} />
           ) : (
-            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
-          )}
-          {showDot && (
-            <span
-              style={{
-                position: 'absolute',
-                left: -3,
-                top: `${(startY / 40) * 100}%`,
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                background: lineColor,
-                transform: 'translateY(-50%)',
-                boxShadow: `0 0 8px ${lineColor}`,
-              }}
-            />
+            <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} pulseAmpScale={id === 'leadership' ? 1.7 : 1} />
           )}
         </div>
       )}
@@ -1153,13 +1214,11 @@ const INTER_PANEL_DELAY_MS = 480;
 function LandingPanel({
   p,
   onEnter,
-  first,
   index,
   pulseTrigger,
 }: {
   p: CategoryMeta;
   onEnter: (id: ViewId) => void;
-  first: boolean;
   index: number;
   pulseTrigger: number;
 }) {
@@ -1192,7 +1251,6 @@ function LandingPanel({
       <PanelMotif
         id={p.id as Exclude<ViewId, 'landing'>}
         fg={p.panelFg}
-        first={first}
         pulseTrigger={pulseTrigger}
         pulseDelay={index * INTER_PANEL_DELAY_MS}
         vertical={isMobile}
@@ -1309,7 +1367,7 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
         }}
       >
         {cats.map((p, i) => (
-          <LandingPanel key={p.id} p={p} onEnter={onEnter} first={i === 0} index={i} pulseTrigger={pulseTrigger} />
+          <LandingPanel key={p.id} p={p} onEnter={onEnter} index={i} pulseTrigger={pulseTrigger} />
         ))}
       </div>
     </div>
