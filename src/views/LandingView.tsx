@@ -456,6 +456,29 @@ const LINE_POINTS: Record<Exclude<ViewId, 'landing'>, [number, number][]> = {
   ],
 };
 
+// Groups consecutive same-Y points into one rigid unit — Tech/Consulting's
+// horizontal runs are exactly 2 points (the two ends of that flat stretch)
+// with a different X each. A per-point Gaussian pluck weight naturally
+// differs between two points at different X, so the two ends of one
+// "horizontal" segment could get different offsets and it'd render tilted
+// instead of flat. Points in the same group later get forced to share one
+// weight (see handleMove) so they move by the same amount and the segment
+// stays perfectly horizontal while shifting up/down. Vertical jumps don't
+// need this: same-X pairs stay vertical no matter how their two Y offsets
+// differ, so they're free to move independently.
+function computeGroupIds(points: [number, number][]): number[] {
+  const ids: number[] = [0];
+  for (let i = 1; i < points.length; i++) {
+    ids.push(points[i][1] === points[i - 1][1] ? ids[i - 1] : ids[i - 1] + 1);
+  }
+  return ids;
+}
+
+const LINE_GROUPS: Partial<Record<Exclude<ViewId, 'landing'>, number[]>> = {
+  tech: computeGroupIds(LINE_POINTS.tech),
+  consulting: computeGroupIds(LINE_POINTS.consulting),
+};
+
 // Where each line starts vertically (0-40 viewBox units) — matches the
 // previous panel's end point so the boundary dot sits exactly on the line.
 const LINE_START_Y: Record<Exclude<ViewId, 'landing'>, number> = { tech: 20, consulting: 20, leadership: 8, reading: 20 };
@@ -510,6 +533,16 @@ function valueAtX(points: [number, number][], x: number) {
 const SPRING_STIFFNESS = 90;
 const SPRING_DAMPING = 6;
 
+// Tech/Consulting move as rigid grouped blocks (see groupIds/coherentPull)
+// rather than an independent wobble per point, so they don't need the taut,
+// snap-back-instantly spring above to avoid looking chaotic — that made
+// their travel feel clipped/restrictive. Softer stiffness and lighter
+// damping than the default spring gives more give and a slower, looser
+// settle, while staying uncoupled (no neighbor tension) so segments still
+// move as flat rigid blocks, not a wobbling thread like Leadership.
+const COHERENT_STIFFNESS = 42;
+const COHERENT_DAMPING = 4.2;
+
 // Leadership's "loose thread" physics: each point is also pulled toward its
 // neighbors' offsets (not just back toward its own rest position), so a
 // disturbance propagates down the line instead of every point oscillating
@@ -540,12 +573,30 @@ function pulseShapeOffset(dx: number) {
   return -spike + rebound; // negative = visually up (SVG y grows down), positive = the dip right after
 }
 
+// Tech/Consulting's grouped lines get this instead: an odd (antisymmetric)
+// bump — as the wave passes a fixed point it swings one way, crosses zero
+// exactly under the wave center, then swings the *other* way by the same
+// amount, before settling. Peaks at dx = ±SYM_PULSE_SIGMA. The EKG shape
+// above peaks around -6.7 (up) but only +1.5 (down) — fine for
+// Leadership's organic heartbeat, but it meant Tech/Consulting's automatic
+// pulse (which fires on a timer regardless of any interaction) was
+// visibly, systematically biased upward rather than moving up and down by
+// equal amounts.
+const SYM_PULSE_AMP = 13;
+const SYM_PULSE_SIGMA = 4;
+
+function symmetricPulseOffset(dx: number) {
+  return SYM_PULSE_AMP * (dx / SYM_PULSE_SIGMA) * Math.exp(-(dx * dx) / (2 * SYM_PULSE_SIGMA * SYM_PULSE_SIGMA));
+}
+
 function ShakyLine({
   points,
   color,
   pulseTrigger,
   pulseDelay,
   vertical = false,
+  coherentPull = false,
+  groupIds,
   threadPhysics = false,
 }: {
   points: [number, number][];
@@ -553,14 +604,29 @@ function ShakyLine({
   pulseTrigger: number;
   pulseDelay: number;
   vertical?: boolean;
-  // Tech/Consulting/Reading's pluck alternates sign point-to-point, which
-  // reads as a buzz/shake — fitting for a jagged chart or scribble. Leadership
-  // instead gets: (1) every affected point pushed the same way — toward
-  // whichever side of the curve the cursor is on, like it's dragging the
-  // line — and (2) points elastically coupled to their neighbors (see
-  // THREAD_* below) instead of springing back independently, so a pluck
-  // ripples down the curve and settles unevenly like a loose thread rather
-  // than the whole bump bouncing back in lockstep.
+  // Reading's pluck alternates sign point-to-point, which reads as a
+  // buzz/shake — fitting for its jittery scribble identity, but on Tech's
+  // step-wave and Consulting's staircase (both built from duplicate-x point
+  // pairs faking right-angle jumps) that same alternation can push the two
+  // ends of one vertical segment in opposite directions at once — the
+  // segment visibly shears/twists instead of the shape just shifting up or
+  // down. coherentPull pushes every affected point the same way instead —
+  // toward whichever side of the line the cursor is on — so the perturbed
+  // region moves as one consistent block along a single axis, no shear.
+  coherentPull?: boolean;
+  // Forces every point in the same group (see computeGroupIds) to receive
+  // the exact same impulse weight, not just the same sign — otherwise two
+  // points at different X within one "horizontal" segment still get
+  // different Gaussian falloff weights and the segment tilts instead of
+  // staying flat while it moves. Points that start equal and always
+  // receive equal impulses stay equal forever under independent-but-
+  // identical spring dynamics, no coupling required.
+  groupIds?: number[];
+  // Leadership additionally gets points elastically coupled to their
+  // neighbors (see THREAD_* below) instead of springing back independently,
+  // so a pluck ripples down the curve and settles unevenly like a loose
+  // thread rather than the whole bump bouncing back in lockstep. Implies
+  // coherentPull's same-direction push regardless of that prop's value.
   threadPhysics?: boolean;
 }) {
   const pathRef = useRef<SVGPathElement>(null);
@@ -598,6 +664,8 @@ function ShakyLine({
         const right = i < points.length - 1 ? prevOffsets[i + 1] : o;
         const tension = (left + right - 2 * o) * THREAD_COUPLING;
         accel = -THREAD_STIFFNESS * o - THREAD_DAMPING * v + tension;
+      } else if (coherentPull) {
+        accel = -COHERENT_STIFFNESS * o - COHERENT_DAMPING * v;
       } else {
         accel = -SPRING_STIFFNESS * o - SPRING_DAMPING * v;
       }
@@ -617,8 +685,27 @@ function ShakyLine({
     const combined = new Float32Array(points.length);
     for (const p of pulses.current) {
       const waveX = -15 + 130 * ((now - p.start) / PULSE_SWEEP_MS);
-      for (let i = 0; i < points.length; i++) {
-        combined[i] += p.amp * pulseShapeOffset(points[i][0] - waveX);
+      if (groupIds) {
+        // Same reasoning as the pluck impulse above: the automatic sweep
+        // computes its offset from distance-to-waveX per point, so without
+        // this a horizontal segment's two ends would take different
+        // offsets as the pulse passes and briefly tilt mid-sweep. Use
+        // whichever member of the group is nearest the wave for the whole
+        // group's offset.
+        const numGroups = groupIds[groupIds.length - 1] + 1;
+        const groupDx = new Float32Array(numGroups).fill(Infinity);
+        for (let i = 0; i < points.length; i++) {
+          const dx = points[i][0] - waveX;
+          const g = groupIds[i];
+          if (Math.abs(dx) < Math.abs(groupDx[g])) groupDx[g] = dx;
+        }
+        for (let i = 0; i < points.length; i++) {
+          combined[i] += p.amp * symmetricPulseOffset(groupDx[groupIds[i]]);
+        }
+      } else {
+        for (let i = 0; i < points.length; i++) {
+          combined[i] += p.amp * pulseShapeOffset(points[i][0] - waveX);
+        }
       }
     }
     for (let i = 0; i < points.length; i++) combined[i] += offsets.current[i];
@@ -664,7 +751,15 @@ function ShakyLine({
     lastPos.current = { x: localX, y: localY };
     if (localX < 0 || localX > 100) return;
     const dyFromLine = localY - valueAtX(points, localX);
-    if (Math.abs(dyFromLine) > 7) return; // only react near the actual stroke
+    // Grouped lines (Tech/Consulting) span a wide Y range across their
+    // different segments (Tech runs from y=8 to y=32) — gating on distance
+    // to *this specific x's* stroke height meant sweeping the cursor in an
+    // ordinary straight line only ever came within range of whichever
+    // segment happened to sit near that height, leaving the others
+    // unresponsive no matter how much you waved at them. Grouped lines
+    // react anywhere in the band instead; direction still comes from which
+    // side of the (still-computed) line height the cursor is on.
+    if (!groupIds && Math.abs(dyFromLine) > 7) return; // only react near the actual stroke
 
     const speed = last ? Math.min(Math.hypot(localX - last.x, localY - last.y) * 8, 50) : 14;
     const impulse = 10 + speed * 0.9;
@@ -677,12 +772,31 @@ function ShakyLine({
     const sigma = threadPhysics ? 5 : 12;
     const coherentSign = Math.sign(dyFromLine) || 1;
     const VELOCITY_CAP = 60;
-    for (let i = 0; i < points.length; i++) {
-      const dx = points[i][0] - localX;
-      const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
-      const sign = threadPhysics ? coherentSign : i % 2 === 0 ? 1 : -1;
-      const nextV = velocities.current[i] + w * impulse * sign;
-      velocities.current[i] = Math.max(-VELOCITY_CAP, Math.min(VELOCITY_CAP, nextV));
+    if (groupIds) {
+      // One shared weight per group — whichever point in the group sits
+      // closest to the cursor wins — so both ends of a horizontal segment
+      // receive an identical impulse and stay level as they move.
+      const numGroups = groupIds[groupIds.length - 1] + 1;
+      const groupWeight = new Float32Array(numGroups);
+      for (let i = 0; i < points.length; i++) {
+        const dx = points[i][0] - localX;
+        const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+        const g = groupIds[i];
+        if (w > groupWeight[g]) groupWeight[g] = w;
+      }
+      for (let i = 0; i < points.length; i++) {
+        const w = groupWeight[groupIds[i]];
+        const nextV = velocities.current[i] + w * impulse * coherentSign;
+        velocities.current[i] = Math.max(-VELOCITY_CAP, Math.min(VELOCITY_CAP, nextV));
+      }
+    } else {
+      for (let i = 0; i < points.length; i++) {
+        const dx = points[i][0] - localX;
+        const w = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+        const sign = threadPhysics || coherentPull ? coherentSign : i % 2 === 0 ? 1 : -1;
+        const nextV = velocities.current[i] + w * impulse * sign;
+        velocities.current[i] = Math.max(-VELOCITY_CAP, Math.min(VELOCITY_CAP, nextV));
+      }
     }
     ensureLoop();
   }
@@ -782,6 +896,11 @@ function PanelMotif({
 
   const lineColor = LINE_COLORS[id];
   const startY = LINE_START_Y[id];
+  // Tech's step-wave and Consulting's staircase are built from duplicate-x
+  // point pairs faking right-angle jumps — the default alternating-sign
+  // pluck can push one such pair's two points apart instead of together,
+  // shearing the vertical segment. Keep them moving as one block.
+  const coherentPull = id === 'tech' || id === 'consulting';
 
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
@@ -792,7 +911,7 @@ function PanelMotif({
         // the panels' own left padding is widened (see LINE_GUTTER) to
         // keep this clear of the title/tagline text above it.
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: LINE_GUTTER }}>
-          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical threadPhysics={id === 'leadership'} />
+          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} vertical coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
           {!first && (
             <span
               style={{
@@ -811,7 +930,7 @@ function PanelMotif({
         </div>
       ) : (
         <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 72, transform: 'translateY(-50%)' }}>
-          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} threadPhysics={id === 'leadership'} />
+          <ShakyLine points={LINE_POINTS[id]} color={lineColor} pulseTrigger={pulseTrigger} pulseDelay={pulseDelay} coherentPull={coherentPull} groupIds={LINE_GROUPS[id]} threadPhysics={id === 'leadership'} />
           {!first && (
             <span
               style={{
