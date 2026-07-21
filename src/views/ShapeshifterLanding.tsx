@@ -214,7 +214,7 @@ function InfoModal({ kind, onClose }: { kind: 'about' | 'contact'; onClose: () =
         >
           ✕
         </button>
-        <div style={{ fontWeight: 900, fontSize: 20, letterSpacing: '.2em', paddingRight: 36 }}>ASWATH SURESH</div>
+        <div style={{ fontWeight: 900, fontSize: 20, letterSpacing: '.2em', paddingRight: 36 }}>{kind === 'about' ? 'ABOUT' : 'CONTACT'}</div>
         {kind === 'about' ? (
           <p style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13.5, lineHeight: 1.7, color: '#8a8f98', margin: '22px 0 0' }}>
             Recent MS Data Science grad from Johns Hopkins with an Aerospace degree from IIT Bombay. I wear multiple hats — shipping AI products as a founding engineer, sizing markets as a strategy consultant, running and expanding organizations, and doing stand-up on the side.
