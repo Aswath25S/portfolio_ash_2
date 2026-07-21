@@ -177,6 +177,52 @@ body {
   }
 }
 
+/* Shapeshifter landing (src/views/ShapeshifterLanding.tsx) */
+@keyframes ssDrift {
+  from {
+    transform: scale(1.07) translate(0%, 0%);
+  }
+  to {
+    transform: scale(1.07) translate(-1.6%, 1.1%);
+  }
+}
+
+@keyframes ssPixelShift {
+  from {
+    background-position: 0px 0px, 0px 0px;
+  }
+  to {
+    background-position: 0px 96px, 96px 0px;
+  }
+}
+
+@keyframes ssHazeFloat {
+  from {
+    transform: translate(0%, 0%) scale(1);
+  }
+  to {
+    transform: translate(-4%, 3%) scale(1.12);
+  }
+}
+
+@keyframes ssFacetShift {
+  from {
+    transform: rotate(0deg) scale(1.2);
+  }
+  to {
+    transform: rotate(5deg) scale(1.32);
+  }
+}
+
+@keyframes ssBlobBob {
+  from {
+    transform: translate(0%, 0%) rotate(0deg);
+  }
+  to {
+    transform: translate(2.5%, -2.5%) rotate(-2.5deg);
+  }
+}
+
 button {
   font: inherit;
 }

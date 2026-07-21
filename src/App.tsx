@@ -4,6 +4,7 @@ import { TransitionOverlay } from './components/TransitionOverlay';
 import { AboutModal } from './components/AboutModal';
 import { CategoryFooter } from './components/CategoryFooter';
 import { LandingView, DOODLE_IDS } from './views/LandingView';
+import { ShapeshifterLanding } from './views/ShapeshifterLanding';
 import { TechView } from './views/TechView';
 import { ConsultingView } from './views/ConsultingView';
 import { LeadershipView } from './views/LeadershipView';
@@ -23,6 +24,7 @@ const ALL_CATS: Exclude<ViewId, 'landing'>[] = ['tech', 'consulting', 'leadershi
 function App() {
   const [view, setView] = useState<ViewId>('landing');
   const [mode, setMode] = useState<Mode>(CONFIG.defaultMode);
+  const [landingVariant, setLandingVariant] = useState<'shapeshifter' | 'classic'>('shapeshifter');
   const [modalOpen, setModalOpen] = useState(false);
   const [overlayActive, setOverlayActive] = useState(false);
   const [overlay, setOverlay] = useState({ color: '#000', fg: '#fff', label: '', num: '', font: "'Bricolage Grotesque'", isHome: false });
@@ -60,7 +62,23 @@ function App() {
       /* ignore */
     }
     if (m === 'dark' || m === 'light') setMode(m);
+    let lv: string | null = null;
+    try {
+      lv = localStorage.getItem('asw_landing_variant');
+    } catch {
+      /* ignore */
+    }
+    if (lv === 'shapeshifter' || lv === 'classic') setLandingVariant(lv);
   }, []);
+
+  function setLandingVariantPersisted(next: 'shapeshifter' | 'classic') {
+    try {
+      localStorage.setItem('asw_landing_variant', next);
+    } catch {
+      /* ignore */
+    }
+    setLandingVariant(next);
+  }
 
   useEffect(() => {
     return () => {
@@ -81,15 +99,20 @@ function App() {
 
   const isLanding = view === 'landing';
   const t = themeFor(isLanding ? 'landing' : view, mode, CONFIG.techAccent);
+  // The Shapeshifter landing is a fixed-dark design (not part of the
+  // dark/light theme system) — its own background needs to win over
+  // whatever `mode` would otherwise resolve to while it's showing.
+  const showShapeshifter = isLanding && landingVariant === 'shapeshifter';
+  const bg = showShapeshifter ? '#0e0f12' : t.bg;
 
   // html/body have no background of their own, so if a browser ever shows a
   // sliver beyond the app's own div (toolbar-driven viewport resize,
   // rubber-band scroll, etc.) it reveals the theme color instead of a
   // jarring default gray/white.
   useEffect(() => {
-    document.documentElement.style.background = t.bg;
-    document.body.style.background = t.bg;
-  }, [t.bg]);
+    document.documentElement.style.background = bg;
+    document.body.style.background = bg;
+  }, [bg]);
 
   // CSS `dvh` should equal window.innerHeight, but some browsers compute it
   // inconsistently (privacy-hardened Chromium forks in particular perturb
@@ -174,7 +197,7 @@ function App() {
         style={{
           position: 'fixed',
           inset: 0,
-          background: t.bg,
+          background: bg,
           transition: 'background .55s ease',
           zIndex: -1,
         }}
@@ -193,18 +216,28 @@ function App() {
         }}
       >
         {isLanding ? (
-          <LandingView
-            t={t}
-            mode={mode}
-            cats={cats}
-            onEnter={transitionTo}
-            onOpenModal={() => setModalOpen(true)}
-            onDownloadResume={downloadResume}
-            onToggleMode={toggleMode}
-            modeIcon={modeIcon}
-            doodleId={DOODLE_IDS[doodleIdx]}
-            onDoodleClick={advanceDoodle}
-          />
+          showShapeshifter ? (
+            <ShapeshifterLanding
+              onEnter={transitionTo}
+              onOpenModal={() => setModalOpen(true)}
+              onDownloadResume={downloadResume}
+              onSwitchToClassic={() => setLandingVariantPersisted('classic')}
+            />
+          ) : (
+            <LandingView
+              t={t}
+              mode={mode}
+              cats={cats}
+              onEnter={transitionTo}
+              onOpenModal={() => setModalOpen(true)}
+              onDownloadResume={downloadResume}
+              onToggleMode={toggleMode}
+              modeIcon={modeIcon}
+              doodleId={DOODLE_IDS[doodleIdx]}
+              onDoodleClick={advanceDoodle}
+              onSwitchToShapeshifter={() => setLandingVariantPersisted('shapeshifter')}
+            />
+          )
         ) : (
           <>
             <CategoryNav

@@ -359,6 +359,7 @@ interface LandingViewProps {
   modeIcon: string;
   doodleId: DoodleId;
   onDoodleClick: () => void;
+  onSwitchToShapeshifter: () => void;
 }
 
 // Each panel's heading sits far from its tagline in this tall layout — rather
@@ -1561,7 +1562,7 @@ function LandingPanel({
 
 const HEARTBEAT_INTERVAL_MS = 5200;
 
-export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon, doodleId, onDoodleClick }: LandingViewProps) {
+export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadResume, onToggleMode, modeIcon, doodleId, onDoodleClick, onSwitchToShapeshifter }: LandingViewProps) {
   // One shared counter drives every panel's line — each panel just delays
   // its own reaction by index * INTER_PANEL_DELAY_MS, so a single tick here
   // reads as one pulse travelling left-to-right through all four lines.
@@ -1598,6 +1599,17 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
           </PillButton>
           <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg} padding={isMobile ? '8px 14px' : undefined} fontSize={isMobile ? 13.5 : undefined}>
             Résumé ↓
+          </PillButton>
+          <PillButton
+            onClick={onSwitchToShapeshifter}
+            accent={t.accent}
+            border={t.border}
+            fg={t.fg}
+            padding={isMobile ? '8px 14px' : undefined}
+            fontSize={isMobile ? 13.5 : undefined}
+            title="Try the new homepage design"
+          >
+            New Look ✨
           </PillButton>
           <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: isMobile ? 36 : 38, height: isMobile ? 36 : 38, borderRadius: 999, fontSize: 15, cursor: 'pointer', flexShrink: 0 }}>
             {modeIcon}
