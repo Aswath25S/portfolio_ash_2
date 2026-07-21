@@ -32,11 +32,16 @@ const FULL = 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)';
 const LEFT = 'polygon(0% 0%, 0% 0%, 0% 100%, 0% 100%)';
 const RIGHT = 'polygon(100% 0%, 100% 0%, 100% 100%, 100% 100%)';
 
-const SLICES: { key: SliceKey; src: string; alt: string; duration: number; direction: 'alternate' | 'alternate-reverse' }[] = [
-  { key: 'tech', src: techImg, alt: 'Aswath Suresh rendered in pixel-art style', duration: 14, direction: 'alternate' },
-  { key: 'lead', src: leadershipImg, alt: 'Aswath Suresh rendered in oil-painting style', duration: 18, direction: 'alternate-reverse' },
-  { key: 'cons', src: consultingImg, alt: 'Aswath Suresh rendered in impressionist style', duration: 22, direction: 'alternate' },
-  { key: 'other', src: otherImg, alt: 'Aswath Suresh rendered in cubist style', duration: 26, direction: 'alternate-reverse' },
+// No per-slice drift/Ken-Burns motion here on purpose: the four portraits
+// are precisely scale- and position-matched to each other so the diagonal
+// slices read as one photo. Independent movement per slice (even at
+// different speeds/directions) would immediately pull them back out of
+// alignment.
+const SLICES: { key: SliceKey; src: string; alt: string }[] = [
+  { key: 'tech', src: techImg, alt: 'Aswath Suresh rendered in pixel-art style' },
+  { key: 'lead', src: leadershipImg, alt: 'Aswath Suresh rendered in oil-painting style' },
+  { key: 'cons', src: consultingImg, alt: 'Aswath Suresh rendered in impressionist style' },
+  { key: 'other', src: otherImg, alt: 'Aswath Suresh rendered in cubist style' },
 ];
 
 const ACCENTS: Record<SliceKey, string> = {
@@ -236,7 +241,6 @@ export function ShapeshifterLanding({ onEnter, onOpenModal, onDownloadResume, on
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                animation: `ssDrift ${s.duration}s ease-in-out infinite ${s.direction}`,
               }}
             />
           </div>

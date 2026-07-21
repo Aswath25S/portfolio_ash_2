@@ -178,15 +178,6 @@ body {
 }
 
 /* Shapeshifter landing (src/views/ShapeshifterLanding.tsx) */
-@keyframes ssDrift {
-  from {
-    transform: scale(1.07) translate(0%, 0%);
-  }
-  to {
-    transform: scale(1.07) translate(-1.6%, 1.1%);
-  }
-}
-
 @keyframes ssPixelShift {
   from {
     background-position: 0px 0px, 0px 0px;
