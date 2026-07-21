@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ViewId } from '../data/theme';
 import { useHover } from '../hooks/useHover';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -153,15 +153,121 @@ function PrimaryButton({ onClick, children }: { onClick: () => void; children: R
   );
 }
 
+// About/Contact popovers styled to match this page's own design language
+// (square corners, thin hairline border, monospace body copy) rather than
+// the rounded/theme-based AboutModal the rest of the app uses — that modal
+// has no separate "Contact" entry point to split into, so it stays as-is
+// for the classic homepage and sub-pages.
+function InfoModal({ kind, onClose }: { kind: 'about' | 'contact'; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 80,
+        background: 'rgba(0,0,0,.6)',
+        WebkitBackdropFilter: 'blur(4px)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          background: '#15161a',
+          color: '#e8e6e1',
+          border: '1px solid rgba(255,255,255,.18)',
+          maxWidth: 440,
+          width: '100%',
+          padding: '36px 32px',
+          fontFamily: 'Archivo, system-ui, sans-serif',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            background: 'none',
+            border: '1px solid rgba(255,255,255,.25)',
+            color: '#e8e6e1',
+            width: 30,
+            height: 30,
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          ✕
+        </button>
+        <div style={{ fontWeight: 900, fontSize: 20, letterSpacing: '.2em', paddingRight: 36 }}>ASWATH SURESH</div>
+        {kind === 'about' ? (
+          <p style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13.5, lineHeight: 1.7, color: '#8a8f98', margin: '22px 0 0' }}>
+            Recent MS Data Science grad from Johns Hopkins with an Aerospace degree from IIT Bombay. I wear multiple hats — shipping AI products as a founding engineer, sizing markets as a strategy consultant, running and expanding organizations, and doing stand-up on the side.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 22 }}>
+            <ContactRow href="mailto:aswathsureshjhu@gmail.com">✉ aswathsureshjhu@gmail.com</ContactRow>
+            <ContactRow href="https://github.com/Aswath25S" external>
+              gh github.com/Aswath25S
+            </ContactRow>
+            <ContactRow href="https://www.linkedin.com/in/aswathsuresh25" external>
+              in linkedin.com/in/aswathsuresh25
+            </ContactRow>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ContactRow({ href, external, children }: { href: string; external?: boolean; children: ReactNode }) {
+  const [hovered, handlers] = useHover();
+  return (
+    <a
+      href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer' : undefined}
+      {...handlers}
+      style={{
+        fontFamily: 'ui-monospace, Menlo, monospace',
+        fontSize: 13.5,
+        color: hovered ? '#fff' : '#e8e6e1',
+        textDecoration: 'none',
+        border: `1px solid ${hovered ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.25)'}`,
+        background: hovered ? 'rgba(255,255,255,.07)' : 'transparent',
+        padding: '11px 14px',
+        transition: 'border-color .2s, background .2s, color .2s',
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 interface ShapeshifterLandingProps {
   onEnter: (id: ViewId) => void;
-  onOpenModal: () => void;
   onDownloadResume: () => void;
   onSwitchToClassic: () => void;
 }
 
-export function ShapeshifterLanding({ onEnter, onOpenModal, onDownloadResume, onSwitchToClassic }: ShapeshifterLandingProps) {
+export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClassic }: ShapeshifterLandingProps) {
   const [active, setActive] = useState<Active>('idle');
+  const [info, setInfo] = useState<'about' | 'contact' | null>(null);
   const isNarrow = useMediaQuery('(max-width: 900px)');
   const hi = active === 'idle' ? -1 : ORDER.indexOf(active as SliceKey);
   const copy = COPY[active];
@@ -275,8 +381,8 @@ export function ShapeshifterLanding({ onEnter, onOpenModal, onDownloadResume, on
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <GhostButton onClick={onOpenModal}>ABOUT</GhostButton>
-            <GhostButton href="mailto:aswathsureshjhu@gmail.com">CONTACT</GhostButton>
+            <GhostButton onClick={() => setInfo('about')}>ABOUT</GhostButton>
+            <GhostButton onClick={() => setInfo('contact')}>CONTACT</GhostButton>
             <PrimaryButton onClick={onDownloadResume}>RÉSUMÉ ↓</PrimaryButton>
             <GhostButton onClick={onSwitchToClassic}>CLASSIC ⇄</GhostButton>
           </div>
@@ -321,6 +427,8 @@ export function ShapeshifterLanding({ onEnter, onOpenModal, onDownloadResume, on
           {copy.q}
         </div>
       </div>
+
+      {info && <InfoModal kind={info} onClose={() => setInfo(null)} />}
     </div>
   );
 }

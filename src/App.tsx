@@ -219,7 +219,6 @@ function App() {
           showShapeshifter ? (
             <ShapeshifterLanding
               onEnter={transitionTo}
-              onOpenModal={() => setModalOpen(true)}
               onDownloadResume={downloadResume}
               onSwitchToClassic={() => setLandingVariantPersisted('classic')}
             />
