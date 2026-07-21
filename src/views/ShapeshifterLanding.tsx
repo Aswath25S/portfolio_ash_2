@@ -245,17 +245,6 @@ export function ShapeshifterLanding({ onEnter, onOpenModal, onDownloadResume, on
             />
           </div>
         ))}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: -3,
-            background: 'linear-gradient(90deg, transparent 42%, rgba(14,15,18,.55) 72%, #0e0f12 94%)',
-            pointerEvents: 'none',
-          }}
-        />
       </div>
 
       {/* Right: identity + nav */}
