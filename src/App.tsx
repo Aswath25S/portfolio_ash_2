@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useIsMobile } from './hooks/useMediaQuery';
 import { CategoryNav } from './components/CategoryNav';
 import { TransitionOverlay } from './components/TransitionOverlay';
 import { AboutModal } from './components/AboutModal';
@@ -97,12 +98,16 @@ function App() {
     }
   }, []);
 
+  const isMobile = useIsMobile();
   const isLanding = view === 'landing';
   const t = themeFor(isLanding ? 'landing' : view, mode, CONFIG.techAccent);
   // The Shapeshifter landing is a fixed-dark design (not part of the
   // dark/light theme system) — its own background needs to win over
   // whatever `mode` would otherwise resolve to while it's showing.
-  const showShapeshifter = isLanding && landingVariant === 'shapeshifter';
+  // Mobile temporarily forced back to the classic landing regardless of
+  // the stored preference — the Shapeshifter redesign's mobile layout
+  // isn't ready yet, so falling back here until it is.
+  const showShapeshifter = isLanding && landingVariant === 'shapeshifter' && !isMobile;
   const bg = showShapeshifter ? '#0e0f12' : t.bg;
 
   // html/body have no background of their own, so if a browser ever shows a
@@ -217,11 +222,7 @@ function App() {
       >
         {isLanding ? (
           showShapeshifter ? (
-            <ShapeshifterLanding
-              onEnter={transitionTo}
-              onDownloadResume={downloadResume}
-              onSwitchToClassic={() => setLandingVariantPersisted('classic')}
-            />
+            <ShapeshifterLanding onEnter={transitionTo} onDownloadResume={downloadResume} />
           ) : (
             <LandingView
               t={t}

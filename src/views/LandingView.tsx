@@ -1600,17 +1600,17 @@ export function LandingView({ t, mode, cats, onEnter, onOpenModal, onDownloadRes
           <PillButton onClick={onDownloadResume} accent={t.accent} border={t.border} fg={t.fg} padding={isMobile ? '8px 14px' : undefined} fontSize={isMobile ? 13.5 : undefined}>
             Résumé ↓
           </PillButton>
-          <PillButton
-            onClick={onSwitchToShapeshifter}
-            accent={t.accent}
-            border={t.border}
-            fg={t.fg}
-            padding={isMobile ? '8px 14px' : undefined}
-            fontSize={isMobile ? 13.5 : undefined}
-            title="Try the new homepage design"
-          >
-            New Look ✨
-          </PillButton>
+          {!isMobile && (
+            <PillButton
+              onClick={onSwitchToShapeshifter}
+              accent={t.accent}
+              border={t.border}
+              fg={t.fg}
+              title="Try the new homepage design"
+            >
+              New Look ✨
+            </PillButton>
+          )}
           <button onClick={onToggleMode} title="Toggle theme" style={{ background: 'none', border: `1px solid ${t.border}`, color: t.fg, width: isMobile ? 36 : 38, height: isMobile ? 36 : 38, borderRadius: 999, fontSize: 15, cursor: 'pointer', flexShrink: 0 }}>
             {modeIcon}
           </button>

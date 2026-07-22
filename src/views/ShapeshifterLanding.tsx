@@ -100,15 +100,27 @@ function hazeStyle(key: SliceKey): CSSProperties {
   }
 }
 
-function GhostButton({ onClick, href, download, children }: { onClick?: () => void; href?: string; download?: boolean; children: ReactNode }) {
+function GhostButton({
+  onClick,
+  href,
+  download,
+  compact,
+  children,
+}: {
+  onClick?: () => void;
+  href?: string;
+  download?: boolean;
+  compact?: boolean;
+  children: ReactNode;
+}) {
   const [hovered, handlers] = useHover();
   const style: CSSProperties = {
     fontFamily: 'ui-monospace, Menlo, monospace',
-    fontSize: 11,
+    fontSize: compact ? 10 : 11,
     letterSpacing: '.12em',
     color: '#e8e6e1',
     textDecoration: 'none',
-    padding: '9px 14px',
+    padding: compact ? '6px 10px' : '9px 14px',
     border: `1px solid ${hovered ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.25)'}`,
     background: hovered ? 'rgba(255,255,255,.07)' : 'transparent',
     transition: 'border-color .2s, background .2s',
@@ -129,7 +141,7 @@ function GhostButton({ onClick, href, download, children }: { onClick?: () => vo
   );
 }
 
-function PrimaryButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+function PrimaryButton({ onClick, compact, children }: { onClick: () => void; compact?: boolean; children: ReactNode }) {
   const [hovered, handlers] = useHover();
   return (
     <button
@@ -137,9 +149,9 @@ function PrimaryButton({ onClick, children }: { onClick: () => void; children: R
       {...handlers}
       style={{
         fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: 11,
+        fontSize: compact ? 10 : 11,
         letterSpacing: '.12em',
-        padding: '9px 14px',
+        padding: compact ? '6px 10px' : '9px 14px',
         border: `1px solid ${hovered ? '#fff' : '#e8e6e1'}`,
         background: hovered ? '#fff' : '#e8e6e1',
         color: '#0e0f12',
@@ -262,10 +274,9 @@ function ContactRow({ href, external, children }: { href: string; external?: boo
 interface ShapeshifterLandingProps {
   onEnter: (id: ViewId) => void;
   onDownloadResume: () => void;
-  onSwitchToClassic: () => void;
 }
 
-export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClassic }: ShapeshifterLandingProps) {
+export function ShapeshifterLanding({ onEnter, onDownloadResume }: ShapeshifterLandingProps) {
   const [active, setActive] = useState<Active>('idle');
   const [info, setInfo] = useState<'about' | 'contact' | null>(null);
   const isNarrow = useMediaQuery('(max-width: 900px)');
@@ -279,10 +290,10 @@ export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClass
   }
 
   const labelSizes: Record<SliceKey, number> = {
-    tech: isNarrow ? 22 : 31,
-    lead: isNarrow ? 34 : 58,
-    cons: isNarrow ? 32 : 56,
-    other: isNarrow ? 26 : 42,
+    tech: isNarrow ? 18 : 31,
+    lead: isNarrow ? 27 : 58,
+    cons: isNarrow ? 25 : 56,
+    other: isNarrow ? 20 : 42,
   };
 
   function renderLabel(key: SliceKey) {
@@ -327,7 +338,7 @@ export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClass
         style={{
           position: 'relative',
           width: isNarrow ? '100%' : '52%',
-          height: isNarrow ? '45vh' : 'auto',
+          height: isNarrow ? '30vh' : 'auto',
           flex: 'none',
           overflow: 'hidden',
           background: '#0e0f12',
@@ -347,6 +358,12 @@ export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClass
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                // Source portraits are 4:5 (1200x1500); the mobile strip is
+                // much shorter and wider than that, so a center crop would
+                // slice straight through the subject's head. Anchoring to
+                // the top keeps the face/hair intact and crops the torso
+                // instead.
+                objectPosition: isNarrow ? 'center top' : 'center',
               }}
             />
           </div>
@@ -360,35 +377,71 @@ export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClass
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          padding: isNarrow ? '28px 24px 22px' : '52px 60px 44px',
+          padding: isNarrow ? '18px 20px 14px' : '52px 60px 44px',
           boxSizing: 'border-box',
-          overflow: 'hidden',
+          overflowX: 'hidden',
+          // Sized to fit without scrolling on typical phones, but this is a
+          // fallback, not the plan: on short viewports (small phones,
+          // landscape, a browser chrome eating extra height) content should
+          // still be reachable by scrolling rather than silently clipped.
+          overflowY: isNarrow ? 'auto' : 'hidden',
         }}
       >
-        {(Object.keys(ACCENTS) as SliceKey[]).map((key) => (
-          <div
-            key={key}
-            aria-hidden
-            style={{ position: 'absolute', pointerEvents: 'none', transition: 'opacity .8s', opacity: active === key ? 1 : 0, ...hazeStyle(key) }}
-          />
-        ))}
+        {/* hazeStyle() bleeds each layer past the panel edges (negative
+            inset) for a soft glow. Clipped in its own layer rather than
+            relying on the panel's own overflow: on mobile that panel is
+            overflow: auto (see above), and an unclipped bleed would count
+            toward its scrollHeight, producing a phantom scrollbar even when
+            the real content already fits. */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          {(Object.keys(ACCENTS) as SliceKey[]).map((key) => (
+            <div key={key} style={{ position: 'absolute', transition: 'opacity .8s', opacity: active === key ? 1 : 0, ...hazeStyle(key) }} />
+          ))}
+        </div>
 
-        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, flexWrap: 'wrap', rowGap: 14 }}>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 21, letterSpacing: '.2em' }}>ASWATH SURESH</div>
-            <div style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, color: '#8a8f98', marginTop: 8, letterSpacing: '.04em' }}>
-              jack of multiple trades, master of one degree
-            </div>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontWeight: 900, fontSize: isNarrow ? 17 : 21, letterSpacing: '.2em' }}>ASWATH SURESH</div>
+          <div
+            style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: isNarrow ? 11 : 12,
+              color: '#8a8f98',
+              marginTop: isNarrow ? 5 : 8,
+              letterSpacing: '.04em',
+            }}
+          >
+            jack of multiple trades, master of one degree
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <GhostButton onClick={() => setInfo('about')}>ABOUT</GhostButton>
-            <GhostButton onClick={() => setInfo('contact')}>CONTACT</GhostButton>
-            <PrimaryButton onClick={onDownloadResume}>RÉSUMÉ ↓</PrimaryButton>
-            <GhostButton onClick={onSwitchToClassic}>CLASSIC ⇄</GhostButton>
+          <div style={{ display: 'flex', gap: isNarrow ? 6 : 10, flexWrap: 'wrap', marginTop: isNarrow ? 14 : 18 }}>
+            <GhostButton compact={isNarrow} onClick={() => setInfo('about')}>ABOUT</GhostButton>
+            <GhostButton compact={isNarrow} onClick={() => setInfo('contact')}>CONTACT</GhostButton>
+            <PrimaryButton compact={isNarrow} onClick={onDownloadResume}>RÉSUMÉ ↓</PrimaryButton>
           </div>
         </div>
 
-        <nav style={{ position: 'relative', display: 'flex', flexDirection: 'column', marginTop: 'auto' }}>
+        <nav
+          style={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            // Desktop keeps the fixed-size list bottom-anchored via
+            // marginTop: auto — that single block of whitespace above it is
+            // the intended editorial look there. On mobile, leftover height
+            // varies a lot by device, and dumping it all into one gap above
+            // the nav could shove the nav+tagline below the fold entirely
+            // (needing a scroll to reach them). Making nav itself flex to
+            // fill the remaining column — with each item below also set to
+            // flex: 1 — spreads that leftover height *between* the items
+            // instead, so the block always ends exactly at the bottom,
+            // whatever the viewport height. (Deliberately not using
+            // justify-content: space-evenly for this: combined with
+            // overflow: auto on the scroll container above, it makes
+            // browsers miscompute scrollHeight and show a phantom
+            // scrollbar even when everything already fits.)
+            marginTop: isNarrow ? 0 : 'auto',
+            flex: isNarrow ? 1 : 'none',
+          }}
+        >
           {NAV_ITEMS.map((item) => {
             const isActive = active === item.key;
             const accent = ACCENTS[item.key];
@@ -406,9 +459,10 @@ export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClass
                 onBlur={() => setActive('idle')}
                 style={{
                   display: 'flex',
-                  alignItems: 'baseline',
+                  alignItems: isNarrow ? 'center' : 'baseline',
+                  flex: isNarrow ? 1 : 'none',
                   gap: 20,
-                  padding: isNarrow ? '18px 0' : '30px 0',
+                  padding: isNarrow ? '10px 0' : '30px 0',
                   paddingLeft: isActive ? 16 : 0,
                   borderBottom: '1px solid rgba(255,255,255,.12)',
                   textDecoration: 'none',
@@ -423,7 +477,18 @@ export function ShapeshifterLanding({ onEnter, onDownloadResume, onSwitchToClass
           })}
         </nav>
 
-        <div style={{ position: 'relative', marginTop: 36, minHeight: 54, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13, lineHeight: 1.6, color: copy.c }}>
+        <div
+          style={{
+            position: 'relative',
+            marginTop: isNarrow ? 14 : 36,
+            marginBottom: isNarrow ? 4 : 0,
+            minHeight: isNarrow ? 0 : 54,
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: isNarrow ? 12 : 13,
+            lineHeight: 1.6,
+            color: copy.c,
+          }}
+        >
           {copy.q}
         </div>
       </div>
